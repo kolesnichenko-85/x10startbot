@@ -33,3 +33,29 @@ async def send_message(chat_id: int, text: str, reply_markup=None):
     if reply_markup:
         payload["reply_markup"] = reply_markup
     return await tg("sendMessage", payload)
+
+async def setup_bot(base_url: str, webhook_secret: str):
+    if not BOT_TOKEN or not base_url or not webhook_secret:
+        return False
+    base_url = base_url.rstrip("/")
+    await tg("setWebhook", {
+        "url": f"{base_url}/telegram/webhook/{webhook_secret}",
+        "allowed_updates": ["message", "pre_checkout_query"]
+    })
+    await tg("setChatMenuButton", {
+        "menu_button": {
+            "type": "web_app",
+            "text": "Open DROP1",
+            "web_app": {"url": base_url}
+        }
+    })
+    await tg("setMyCommands", {
+        "commands": [
+            {"command":"start","description":"Open DROP1"},
+            {"command":"collection","description":"My collection"},
+            {"command":"odds","description":"Drop rarity odds"},
+            {"command":"leaderboard","description":"Leaderboard"},
+            {"command":"support","description":"Support"}
+        ]
+    })
+    return True
