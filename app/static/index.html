@@ -23,7 +23,7 @@ h1{font-size:30px;margin:0 0 8px}.muted{color:var(--muted)}
 .testnote{display:none;margin-top:9px;color:#ffd86a;font-size:12px;font-weight:700;letter-spacing:.03em}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:24px 0}.stat{background:#12151d;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:19px}.stat span{font-size:12px;color:var(--muted)}
 .section{margin-top:26px}.section h2{font-size:18px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.card{background:#12151d;border:1px solid var(--line);border-radius:17px;padding:13px;min-height:152px;position:relative;overflow:hidden}.card .emoji{font-size:48px}.card .name{font-weight:800;margin-top:10px}.card .meta{font-size:12px;color:var(--muted)}
-.badge{position:absolute;right:10px;top:10px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:5px 7px;border-radius:20px;background:#252a37}.common .badge{color:#c7cedb}.rare .badge{color:#7cb8ff}.epic .badge{color:#cf8cff}.legendary .badge{color:#ffd86a}.mythic .badge{color:#7fffd4}.share{background:#171a24;color:#fff;border:1px solid var(--line)}.empty{padding:24px;border:1px dashed #343a49;border-radius:16px;text-align:center;color:var(--muted)}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 14px;border-radius:99px;font-weight:700;display:none;z-index:9;max-width:90%;text-align:center}
+.badge{position:absolute;right:10px;top:10px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:5px 7px;border-radius:20px;background:#252a37}.common .badge{color:#c7cedb}.rare .badge{color:#7cb8ff}.epic .badge{color:#cf8cff}.legendary .badge{color:#ffd86a}.mythic .badge{color:#7fffd4}.share{background:#171a24;color:#fff;border:1px solid var(--line)}.market{background:linear-gradient(135deg,#20283a,#171b27);color:#fff;border:1px solid #3b4863}.empty{padding:24px;border:1px dashed #343a49;border-radius:16px;text-align:center;color:var(--muted)}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 14px;border-radius:99px;font-weight:700;display:none;z-index:9;max-width:90%;text-align:center}
 </style>
 </head>
 <body>
@@ -56,6 +56,7 @@ h1{font-size:30px;margin:0 0 8px}.muted{color:var(--muted)}
     <div class="stat"><b id="dust">0</b><span>DUST</span></div>
   </div>
   <button class="btn share" id="shareBtn">SHARE MY COLLECTION</button>
+  <button class="btn market" id="marketBtn">TRADE MARKET · BETA</button>
   <div class="section"><h2>Your collection</h2><div class="grid" id="collection"></div></div>
 </div>
 <div class="toast" id="toast"></div>
@@ -69,6 +70,7 @@ function render(){document.getElementById("xp").textContent=`${state.user.xp} XP
 async function refresh(){state=await api("/api/bootstrap");render()}
 document.getElementById("openBtn").onclick=async()=>{const b=document.getElementById("openBtn");if((state?.pool?.remaining??0)<=0)return;b.disabled=true;try{if(state?.test_mode){const r=await api("/api/test/drop",{method:"POST"});toast(`${r.character.rarity.toUpperCase()} · ${r.character.name} #${String(r.serial_no).padStart(6,"0")}`);await refresh();return}const beforeCount=state?.collection?.length||0;const inv=await api("/api/invoice/drop",{method:"POST"});if(inv.pool){state.pool=inv.pool;renderPool();}if(tg?.openInvoice){tg.openInvoice(inv.invoice_url,async status=>{if(status==="paid"){toast("Payment confirmed. Minting your DROP…");for(let i=0;i<10;i++){await new Promise(r=>setTimeout(r,650));await refresh();if(state.collection.length>beforeCount)break}}else if(status==="cancelled"){toast("Cancelled");await refresh();}})}else{window.location.href=inv.invoice_url}}catch(e){const msg=String(e||"");toast(msg.includes("sold out")?"Today's global pool is sold out":(state?.test_mode?"Test DROP failed":"Could not create invoice"));console.error(e);await refresh().catch(()=>{});}finally{if((state?.pool?.remaining??0)>0)b.disabled=false}};
 document.getElementById("shareBtn").onclick=async()=>{if(!state?.share_url)return toast("Share link unavailable");const text=`I’m collecting DROP1 creatures. Open your first DROP: ${state.share_url}`;if(tg?.openTelegramLink)tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(state.share_url)}&text=${encodeURIComponent(text)}`);else navigator.clipboard?.writeText(state.share_url)};
+document.getElementById("marketBtn").onclick=()=>{window.location.href="/static/market.html"};
 refresh().catch(e=>{console.error(e);toast("Open this app inside Telegram")});
 </script>
 </body>
