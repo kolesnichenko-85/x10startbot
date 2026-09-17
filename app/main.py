@@ -9,7 +9,7 @@ load_dotenv()
 from .auth import validate_init_data
 from .catalog import CATALOG, RARITY_ORDER
 from .db import init_db, upsert_user, get_user, create_purchase, get_purchase, mark_paid_and_mint, collection, leaderboard
-from .telegram import create_drop_invoice, answer_precheckout, send_message
+from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 
 DROP_PRICE_STARS = int(os.getenv("DROP_PRICE_STARS", "50"))
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
@@ -20,8 +20,12 @@ app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.on_event("startup")
-def startup():
+async def startup():
     init_db()
+    try:
+        await setup_bot(os.getenv("BASE_URL",""), WEBHOOK_SECRET)
+    except Exception as e:
+        print(f"Telegram setup skipped/failed: {e}")
 
 def auth_user(init_data: str | None):
     try:
@@ -58,39 +62,20 @@ async def home():
 
 @app.get("/health")
 async def health():
-    return {"ok": True}
+    return {"ok": True, "bot_configured": bool(os.getenv("BOT_TOKEN"))}
 
 @app.get("/odds", response_class=HTMLResponse)
 async def odds_page():
-    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1">
-    <body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55">
-    <h1>DROP1 — Season 0 Odds</h1>
-    <p>Every paid DROP contains exactly one digital collectible.</p>
-    <ul><li>Common — 65.0%</li><li>Rare — 25.0%</li><li>Epic — 8.0%</li><li>Legendary — 1.8%</li><li>Mythic — 0.2%</li></ul>
-    <p>Collectibles do not represent money, securities, or a promise of resale value. There is no cash-out.</p>
-    </body></html>"""
+    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 — Season 0 Odds</h1><p>Every paid DROP contains exactly one digital collectible.</p><ul><li>Common — 65.0%</li><li>Rare — 25.0%</li><li>Epic — 8.0%</li><li>Legendary — 1.8%</li><li>Mythic — 0.2%</li></ul><p>Collectibles do not represent money, securities, or a promise of resale value. There is no cash-out.</p></body></html>"""
 
 @app.get("/terms", response_class=HTMLResponse)
 async def terms_page():
     support = SUPPORT_HANDLE or "the support contact shown in the bot"
-    return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1">
-    <body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55">
-    <h1>DROP1 Terms — MVP</h1>
-    <p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible. The collectible received is randomly selected according to the published Season odds.</p>
-    <p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation. A secondary-market resale feature is not part of this MVP.</p>
-    <p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p>
-    <p><b>Before public launch, replace this MVP notice with operator-specific legal terms and required consumer disclosures for target markets.</b></p>
-    </body></html>"""
+    return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Terms — MVP</h1><p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible. The collectible received is randomly selected according to the published Season odds.</p><p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation. A secondary-market resale feature is not part of this MVP.</p><p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p></body></html>"""
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
-    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1">
-    <body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55">
-    <h1>DROP1 Privacy — MVP</h1>
-    <p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection, purchases, referrals, XP and support. It does not need a phone number, card number or postal address for Telegram Stars purchases.</p>
-    <p>Payment identifiers are stored to reconcile purchases and handle refunds or disputes.</p>
-    <p><b>Before public launch, add the legal operator identity, retention policy, data-subject request process and jurisdiction-specific disclosures.</b></p>
-    </body></html>"""
+    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Privacy — MVP</h1><p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection, purchases, referrals, XP and support.</p><p>Payment identifiers are stored to reconcile purchases and handle refunds or disputes.</p></body></html>"""
 
 @app.get("/api/bootstrap")
 async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
@@ -145,17 +130,14 @@ async def telegram_webhook(secret: str, request: Request):
     text = (msg.get("text") or "").strip()
     chat_id = (msg.get("chat") or {}).get("id")
     base = os.getenv("BASE_URL","").rstrip("/")
-
     if chat_id and text.startswith("/start"):
         markup = {"inline_keyboard":[[{"text":"Open DROP1","web_app":{"url":base}}]]} if base else None
         await send_message(chat_id,"DROP1 is a digital collectible game. Every paid DROP contains one guaranteed collectible.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.",markup)
         return {"ok": True}
-
     if chat_id and text.startswith("/collection"):
-        markup = {"inline_keyboard":[[{"text":"Open my collection","web_app":{"url":base}}]]} if base else None
+        markup = {"inline_keyboard":[[ {"text":"Open my collection","web_app":{"url":base}} ]]} if base else None
         await send_message(chat_id, "Your DROP1 collection is inside the Mini App.", markup)
         return {"ok": True}
-
     if chat_id and text.startswith("/leaderboard"):
         rows = leaderboard(10)
         if rows:
@@ -169,20 +151,16 @@ async def telegram_webhook(secret: str, request: Request):
         else:
             await send_message(chat_id, "The leaderboard is empty. Be the first collector.")
         return {"ok": True}
-
     if chat_id and text.startswith("/odds"):
         await send_message(chat_id,"Season 0 odds:\nCommon 65% · Rare 25% · Epic 8% · Legendary 1.8% · Mythic 0.2%" + (f"\n{base}/odds" if base else ""))
         return {"ok": True}
-
     if chat_id and text.startswith("/terms"):
         await send_message(chat_id, (f"{base}/terms" if base else "Terms will be available in the Mini App."))
         return {"ok": True}
-
     if chat_id and text.startswith("/support"):
         support = SUPPORT_HANDLE or "the project operator"
         await send_message(chat_id,f"Purchase support: {support}\nTelegram Support does not handle purchases made from this bot.")
         return {"ok": True}
-
     sp = msg.get("successful_payment")
     if sp:
         payload = sp.get("invoice_payload","")
@@ -199,5 +177,4 @@ async def telegram_webhook(secret: str, request: Request):
                     markup = {"inline_keyboard":[[{"text":"Open collection","web_app":{"url":base}}]]} if base else None
                     await send_message(p["telegram_id"],f"🎉 {rarity} DROP!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour collectible is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),markup)
         return {"ok": True}
-
     return {"ok": True}
