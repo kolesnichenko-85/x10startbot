@@ -105,6 +105,15 @@ def get_purchase(pid: str):
     with conn() as c:
         return c.execute("SELECT * FROM purchases WHERE id=?", (pid,)).fetchone()
 
+def _next_serial(c, character_id: str):
+    serial = c.execute("SELECT last_serial FROM character_serials WHERE character_id=?", (character_id,)).fetchone()
+    next_serial = (serial["last_serial"] if serial else 0) + 1
+    if serial:
+        c.execute("UPDATE character_serials SET last_serial=? WHERE character_id=?", (next_serial, character_id))
+    else:
+        c.execute("INSERT INTO character_serials(character_id,last_serial) VALUES (?,?)", (character_id,next_serial))
+    return next_serial
+
 def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
     with conn() as c:
         p = c.execute("SELECT * FROM purchases WHERE id=?", (pid,)).fetchone()
@@ -115,13 +124,7 @@ def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
             item = c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
             return item, False
 
-        serial = c.execute("SELECT last_serial FROM character_serials WHERE character_id=?", (character_id,)).fetchone()
-        next_serial = (serial["last_serial"] if serial else 0) + 1
-        if serial:
-            c.execute("UPDATE character_serials SET last_serial=? WHERE character_id=?", (next_serial, character_id))
-        else:
-            c.execute("INSERT INTO character_serials(character_id,last_serial) VALUES (?,?)", (character_id,next_serial))
-
+        next_serial = _next_serial(c, character_id)
         now = utcnow()
         c.execute(
             "UPDATE purchases SET status='paid', telegram_charge_id=?, paid_at=? WHERE id=?",
@@ -148,6 +151,22 @@ def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
 
         item = c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
         return item, True
+
+def mark_test_and_mint(pid: str, telegram_id: int, character_id: str):
+    """Free QA mint. Exercises draw/serial/collection/XP without Telegram payment or referral rewards."""
+    with conn() as c:
+        now = utcnow()
+        next_serial = _next_serial(c, character_id)
+        c.execute(
+            "INSERT INTO purchases (id, telegram_id, kind, stars, status, telegram_charge_id, created_at, paid_at) VALUES (?,?,?,?,?,?,?,?)",
+            (pid, telegram_id, "test", 0, "paid", f"test:{pid}", now, now)
+        )
+        c.execute(
+            "INSERT INTO owned_items (telegram_id, character_id, serial_no, purchase_id, acquired_at) VALUES (?,?,?,?,?)",
+            (telegram_id, character_id, next_serial, pid, now)
+        )
+        c.execute("UPDATE users SET xp=xp+10 WHERE telegram_id=?", (telegram_id,))
+        return c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
 
 def collection(telegram_id: int):
     with conn() as c:
