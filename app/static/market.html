@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>DROP1 Market</title>
+<script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+<style>
+:root{--bg:#090b10;--card:#131722;--line:#293043;--text:#f6f7fb;--muted:#8f98aa;--cyan:#62e8ff;--violet:#a67cff;--danger:#ff7c8f}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#202a40 0,#090b10 42%);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,Inter,Segoe UI,sans-serif;min-height:100vh}.wrap{max-width:560px;margin:auto;padding:18px 16px 90px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.back{border:1px solid var(--line);background:#11151f;color:#fff;border-radius:12px;padding:9px 12px;font-weight:800}.brand{font-weight:950;letter-spacing:.12em}.beta{font-size:11px;color:#c9b7ff;border:1px solid #524476;border-radius:99px;padding:6px 9px}.intro{background:linear-gradient(145deg,#151b28,#0e1119);border:1px solid var(--line);border-radius:20px;padding:17px;margin-bottom:18px}.intro h1{font-size:24px;margin:0 0 6px}.intro p{margin:0;color:var(--muted)}.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0}.tab{border:1px solid var(--line);background:#11151d;color:#aeb6c6;border-radius:13px;padding:11px;font-weight:850}.tab.active{background:#fff;color:#0a0c10}.panel{display:none}.panel.active{display:block}.section{margin-top:22px}.section h2{font-size:17px;margin:0 0 10px}.form{background:#11151d;border:1px solid var(--line);border-radius:17px;padding:14px}.label{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.08em;margin:10px 0 6px}.select,.input{width:100%;border:1px solid #30384b;background:#0c0f16;color:#fff;border-radius:12px;padding:12px;font-size:14px}.btn{width:100%;border:0;border-radius:13px;padding:12px 14px;font-weight:900;margin-top:11px;background:#fff;color:#090b10}.btn.secondary{background:#181d29;color:#fff;border:1px solid var(--line)}.btn.danger{background:#28151a;color:#ffb5c0;border:1px solid #61323b}.list{display:grid;gap:11px}.listing,.offer{background:#11151d;border:1px solid var(--line);border-radius:17px;padding:14px}.row{display:flex;gap:12px;align-items:center}.avatar{width:66px;height:82px;border-radius:13px;background:linear-gradient(145deg,#293149,#10131b);display:grid;place-items:center;font-size:34px;border:1px solid #343d52;position:relative;overflow:hidden}.avatar:after{content:"";position:absolute;inset:0;border:1px solid #ffffff12;border-radius:13px;pointer-events:none}.rare .avatar{box-shadow:inset 0 0 28px #2c6cff45}.epic .avatar{box-shadow:inset 0 0 28px #a04cff45}.legendary .avatar{box-shadow:inset 0 0 28px #ffb00055}.mythic .avatar{box-shadow:inset 0 0 30px #65e9ff55}.info{min-width:0;flex:1}.name{font-weight:950;font-size:16px}.meta,.want,.seller{font-size:12px;color:var(--muted);margin-top:3px}.rarity{display:inline-block;margin-top:6px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;border-radius:99px;padding:4px 7px;background:#252b39}.rare .rarity{color:#79b9ff}.epic .rarity{color:#d38bff}.legendary .rarity{color:#ffd76c}.mythic .rarity{color:#82fff0}.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.actions .btn{margin:0}.empty{padding:24px 16px;text-align:center;border:1px dashed #343b4d;border-radius:16px;color:var(--muted)}.note{font-size:12px;color:#c9d0dc;margin-top:8px}.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:none;background:#fff;color:#111;padding:10px 14px;border-radius:99px;font-weight:800;z-index:20;max-width:90%;text-align:center}.modal{position:fixed;inset:0;background:#000b;display:none;align-items:flex-end;z-index:15}.sheet{width:100%;max-width:560px;margin:0 auto;background:#11151d;border-radius:22px 22px 0 0;padding:18px 16px 30px;border:1px solid #31384a}.sheet h3{margin:0 0 8px;font-size:20px}.small{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><button class="back" onclick="history.back()">← DROP1</button><div class="brand">MARKET</div><div class="beta">BETA</div></div>
+  <div class="intro"><h1>Collector market</h1><p>Owners choose what they want in return. DROP1 does not price cards or guarantee value. Paid resale is not enabled in this beta.</p></div>
+  <div class="tabs"><button id="feedTab" class="tab active">TRADE BOARD</button><button id="mineTab" class="tab">MY ACTIVITY</button></div>
+
+  <div id="feedPanel" class="panel active">
+    <div class="section"><h2>List one of your cards</h2>
+      <div class="form">
+        <div class="label">YOUR CARD</div><select id="listItem" class="select"></select>
+        <div class="label">LOOKING FOR RARITY (OPTIONAL)</div>
+        <select id="wantRarity" class="select"><option value="">Any card</option><option>common</option><option>rare</option><option>epic</option><option>legendary</option><option>mythic</option></select>
+        <div class="label">NOTE (OPTIONAL)</div><input id="listNote" class="input" maxlength="180" placeholder="Example: Looking for another Genesis card"/>
+        <button id="createListing" class="btn">LIST FOR TRADE</button>
+      </div>
+    </div>
+    <div class="section"><h2>Open listings</h2><div id="feed" class="list"></div></div>
+  </div>
+
+  <div id="minePanel" class="panel">
+    <div class="section"><h2>My listings</h2><div id="myListings" class="list"></div></div>
+    <div class="section"><h2>Offers received</h2><div id="received" class="list"></div></div>
+    <div class="section"><h2>Offers sent</h2><div id="sent" class="list"></div></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<div id="modal" class="modal"><div class="sheet"><h3>Make an offer</h3><div id="targetText" class="small"></div><div class="label">OFFER ONE OF YOUR CARDS</div><select id="offerItem" class="select"></select><div class="label">NOTE (OPTIONAL)</div><input id="offerNote" class="input" maxlength="180" placeholder="Add a short note"/><button id="sendOffer" class="btn">SEND OFFER</button><button id="closeModal" class="btn secondary">CANCEL</button></div></div>
+<script>
+const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand()}const initData=tg?.initData||"dev";let state=null,feed=[],mine=null,currentListing=null;
+async function api(path,opts={}){opts.headers={...(opts.headers||{}),"X-Telegram-Init-Data":initData,"Content-Type":"application/json"};const r=await fetch(path,opts);const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{}if(!r.ok)throw new Error(data.detail||text||"Request failed");return data}
+function toast(s){const t=document.getElementById("toast");t.textContent=s;t.style.display="block";setTimeout(()=>t.style.display="none",2400)}
+function cardLine(item){return `<div class="row"><div class="avatar">${item.emoji||"◉"}</div><div class="info"><div class="name">${item.name}</div><div class="meta">#${String(item.serial_no).padStart(6,"0")} · PWR ${item.power} · LCK ${item.luck}</div><div class="rarity">${item.rarity}</div></div></div>`}
+function empty(t){return `<div class="empty">${t}</div>`}
+function ownerName(s){if(s?.username)return "@"+s.username;return s?.first_name||"collector"}
+function myOptions(selectId,excludeId=null){const el=document.getElementById(selectId);const cards=(state?.collection||[]).filter(x=>x.item_id!==excludeId);el.innerHTML=cards.length?cards.map(x=>`<option value="${x.item_id}">${x.name} #${String(x.serial_no).padStart(6,"0")} · ${x.rarity}</option>`).join(""):"<option value=''>No available cards</option>";el.disabled=!cards.length}
+function renderFeed(){const root=document.getElementById("feed");if(!feed.length){root.innerHTML=empty("No active trade listings yet.");return}root.innerHTML=feed.map(l=>{const own=l.seller.id===state.user.id;const want=l.want_rarity?`Wants: ${l.want_rarity.toUpperCase()} or an offer`:"Open to offers";return `<div class="listing ${l.item.rarity}">${cardLine(l.item)}<div class="seller">Owner: ${ownerName(l.seller)}</div><div class="want">${want}</div>${l.note?`<div class="note">${l.note}</div>`:""}${own?"":`<button class="btn secondary" onclick="openOffer('${l.id}',${l.item.item_id},'${l.item.name.replaceAll("'","&#39;")}')">MAKE OFFER</button>`}</div>`}).join("")}
+function renderMine(){const a=document.getElementById("myListings"),b=document.getElementById("received"),c=document.getElementById("sent");const active=(mine?.listings||[]).filter(x=>x.status==="active");a.innerHTML=active.length?active.map(l=>`<div class="listing ${l.item.rarity}">${cardLine(l.item)}<div class="want">${l.want_rarity?`Wants: ${l.want_rarity.toUpperCase()}`:"Open to offers"}</div><button class="btn danger" onclick="cancelListing('${l.id}')">CANCEL LISTING</button></div>`).join(""):empty("You have no active listings.");const rec=mine?.received_offers||[];b.innerHTML=rec.length?rec.map(o=>`<div class="offer ${o.offered_item?.rarity||""}">${o.offered_item?cardLine(o.offered_item):""}<div class="seller">From: ${ownerName(o.offerer)}</div>${o.note?`<div class="note">${o.note}</div>`:""}<div class="actions"><button class="btn" onclick="acceptOffer('${o.id}')">ACCEPT</button><button class="btn danger" onclick="rejectOffer('${o.id}')">REJECT</button></div></div>`).join(""):empty("No pending offers received.");const sent=mine?.sent_offers||[];c.innerHTML=sent.length?sent.map(o=>`<div class="offer ${o.offered_item?.rarity||""}">${o.offered_item?cardLine(o.offered_item):""}<div class="meta">Status: ${o.status}</div>${o.status==="pending"?`<button class="btn secondary" onclick="withdrawOffer('${o.id}')">WITHDRAW OFFER</button>`:""}</div>`).join(""):empty("No offers sent.")}
+async function refresh(){[state,{listings:feed},mine]=await Promise.all([api("/api/bootstrap"),api("/api/market"),api("/api/market/my")]);myOptions("listItem");renderFeed();renderMine()}
+async function createListing(){const item_id=Number(document.getElementById("listItem").value);if(!item_id)return toast("No card available");try{await api("/api/market/listings",{method:"POST",body:JSON.stringify({item_id,mode:"trade",want_rarity:document.getElementById("wantRarity").value,note:document.getElementById("listNote").value})});document.getElementById("listNote").value="";toast("Listed for trade");await refresh()}catch(e){toast(e.message)}}
+function openOffer(id,itemId,name){currentListing=id;document.getElementById("targetText").textContent=`You are offering for ${name}.`;myOptions("offerItem",itemId);document.getElementById("offerNote").value="";document.getElementById("modal").style.display="flex"}
+async function sendOffer(){const offered_item_id=Number(document.getElementById("offerItem").value);if(!currentListing||!offered_item_id)return toast("Choose a card");try{await api(`/api/market/listings/${currentListing}/offers`,{method:"POST",body:JSON.stringify({offered_item_id,note:document.getElementById("offerNote").value})});document.getElementById("modal").style.display="none";toast("Offer sent");await refresh()}catch(e){toast(e.message)}}
+async function act(path,msg){try{await api(path,{method:"POST",body:"{}"});toast(msg);await refresh()}catch(e){toast(e.message)}}
+function cancelListing(id){act(`/api/market/listings/${id}/cancel`,"Listing cancelled")}
+function acceptOffer(id){act(`/api/market/offers/${id}/accept`,"Trade completed")}
+function rejectOffer(id){act(`/api/market/offers/${id}/reject`,"Offer rejected")}
+function withdrawOffer(id){act(`/api/market/offers/${id}/withdraw`,"Offer withdrawn")}
+document.getElementById("createListing").onclick=createListing;document.getElementById("sendOffer").onclick=sendOffer;document.getElementById("closeModal").onclick=()=>document.getElementById("modal").style.display="none";document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")e.currentTarget.style.display="none"};
+document.getElementById("feedTab").onclick=()=>{document.getElementById("feedTab").classList.add("active");document.getElementById("mineTab").classList.remove("active");document.getElementById("feedPanel").classList.add("active");document.getElementById("minePanel").classList.remove("active")};document.getElementById("mineTab").onclick=()=>{document.getElementById("mineTab").classList.add("active");document.getElementById("feedTab").classList.remove("active");document.getElementById("minePanel").classList.add("active");document.getElementById("feedPanel").classList.remove("active")};
+refresh().catch(e=>{console.error(e);toast("Open inside Telegram")});
+</script>
+</body>
+</html>
