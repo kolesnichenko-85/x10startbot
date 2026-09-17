@@ -1,13 +1,13 @@
 import os, uuid, secrets
 from fastapi import FastAPI, Request, HTTPException, Header
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from .auth import validate_init_data
-from .catalog import CATALOG
+from .catalog import CATALOG, RARITY_ORDER
 from .db import init_db, upsert_user, get_user, create_purchase, get_purchase, mark_paid_and_mint, collection, leaderboard
 from .telegram import create_drop_invoice, answer_precheckout, send_message
 
@@ -66,8 +66,7 @@ async def odds_page():
     <body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55">
     <h1>DROP1 — Season 0 Odds</h1>
     <p>Every paid DROP contains exactly one digital collectible.</p>
-    <ul><li>Common — 65.0%</li><li>Rare — 25.0%</li><li>Epic — 8.0%</li>
-    <li>Legendary — 1.8%</li><li>Mythic — 0.2%</li></ul>
+    <ul><li>Common — 65.0%</li><li>Rare — 25.0%</li><li>Epic — 8.0%</li><li>Legendary — 1.8%</li><li>Mythic — 0.2%</li></ul>
     <p>Collectibles do not represent money, securities, or a promise of resale value. There is no cash-out.</p>
     </body></html>"""
 
@@ -77,10 +76,10 @@ async def terms_page():
     return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1">
     <body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55">
     <h1>DROP1 Terms — MVP</h1>
-    <p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible.
-    The collectible received is randomly selected according to the published Season odds.</p>
-    <p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation.</p>
+    <p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible. The collectible received is randomly selected according to the published Season odds.</p>
+    <p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation. A secondary-market resale feature is not part of this MVP.</p>
     <p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p>
+    <p><b>Before public launch, replace this MVP notice with operator-specific legal terms and required consumer disclosures for target markets.</b></p>
     </body></html>"""
 
 @app.get("/privacy", response_class=HTMLResponse)
@@ -88,9 +87,9 @@ async def privacy_page():
     return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1">
     <body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55">
     <h1>DROP1 Privacy — MVP</h1>
-    <p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection,
-    purchases, referrals, XP and support.</p>
+    <p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection, purchases, referrals, XP and support. It does not need a phone number, card number or postal address for Telegram Stars purchases.</p>
     <p>Payment identifiers are stored to reconcile purchases and handle refunds or disputes.</p>
+    <p><b>Before public launch, add the legal operator identity, retention policy, data-subject request process and jurisdiction-specific disclosures.</b></p>
     </body></html>"""
 
 @app.get("/api/bootstrap")
@@ -103,14 +102,7 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         c = by_id[row["character_id"]]
         items.append({**public_character(c), "serial_no": row["serial_no"], "acquired_at": row["acquired_at"]})
     unique = len(set(i["id"] for i in items))
-    return {
-        "user": {"id":tid,"username":u["username"],"first_name":u["first_name"],"xp":u["xp"],"dust":u["dust"]},
-        "price_stars": DROP_PRICE_STARS,
-        "catalog_total": len(CATALOG),
-        "collection": items,
-        "unique_count": unique,
-        "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else ""
-    }
+    return {"user": {"id":tid,"username":u["username"],"first_name":u["first_name"],"xp":u["xp"],"dust":u["dust"]},"price_stars": DROP_PRICE_STARS,"catalog_total": len(CATALOG),"collection": items,"unique_count": unique,"share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else ""}
 
 @app.get("/api/catalog")
 async def catalog_api():
@@ -136,7 +128,6 @@ async def telegram_webhook(secret: str, request: Request):
     if not WEBHOOK_SECRET or secret != WEBHOOK_SECRET:
         raise HTTPException(status_code=404)
     update = await request.json()
-
     pcq = update.get("pre_checkout_query")
     if pcq:
         payload = pcq.get("invoice_payload","")
@@ -157,13 +148,30 @@ async def telegram_webhook(secret: str, request: Request):
 
     if chat_id and text.startswith("/start"):
         markup = {"inline_keyboard":[[{"text":"Open DROP1","web_app":{"url":base}}]]} if base else None
-        await send_message(chat_id,
-            "DROP1 is a digital collectible game. Every paid DROP contains one guaranteed collectible.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.",
-            markup)
+        await send_message(chat_id,"DROP1 is a digital collectible game. Every paid DROP contains one guaranteed collectible.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.",markup)
+        return {"ok": True}
+
+    if chat_id and text.startswith("/collection"):
+        markup = {"inline_keyboard":[[{"text":"Open my collection","web_app":{"url":base}}]]} if base else None
+        await send_message(chat_id, "Your DROP1 collection is inside the Mini App.", markup)
+        return {"ok": True}
+
+    if chat_id and text.startswith("/leaderboard"):
+        rows = leaderboard(10)
+        if rows:
+            lines = ["🏆 DROP1 Leaderboard"]
+            for idx, row in enumerate(rows, start=1):
+                name = row["username"] or row["first_name"] or f"user_{row['telegram_id']}"
+                if row["username"]:
+                    name = "@" + name
+                lines.append(f"{idx}. {name} — {row['xp']} XP · {row['drops']} drops")
+            await send_message(chat_id, "\n".join(lines))
+        else:
+            await send_message(chat_id, "The leaderboard is empty. Be the first collector.")
         return {"ok": True}
 
     if chat_id and text.startswith("/odds"):
-        await send_message(chat_id, "Season 0 odds:\nCommon 65% · Rare 25% · Epic 8% · Legendary 1.8% · Mythic 0.2%" + (f"\n{base}/odds" if base else ""))
+        await send_message(chat_id,"Season 0 odds:\nCommon 65% · Rare 25% · Epic 8% · Legendary 1.8% · Mythic 0.2%" + (f"\n{base}/odds" if base else ""))
         return {"ok": True}
 
     if chat_id and text.startswith("/terms"):
@@ -172,7 +180,7 @@ async def telegram_webhook(secret: str, request: Request):
 
     if chat_id and text.startswith("/support"):
         support = SUPPORT_HANDLE or "the project operator"
-        await send_message(chat_id, f"Purchase support: {support}\nTelegram Support does not handle purchases made from this bot.")
+        await send_message(chat_id,f"Purchase support: {support}\nTelegram Support does not handle purchases made from this bot.")
         return {"ok": True}
 
     sp = msg.get("successful_payment")
@@ -189,11 +197,7 @@ async def telegram_webhook(secret: str, request: Request):
                     rarity = character["rarity"].upper()
                     share_url = f"https://t.me/{BOT_USERNAME}?startapp=ref_{p['telegram_id']}" if BOT_USERNAME else ""
                     markup = {"inline_keyboard":[[{"text":"Open collection","web_app":{"url":base}}]]} if base else None
-                    await send_message(
-                        p["telegram_id"],
-                        f"🎉 {rarity} DROP!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour collectible is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),
-                        markup
-                    )
+                    await send_message(p["telegram_id"],f"🎉 {rarity} DROP!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour collectible is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),markup)
         return {"ok": True}
 
     return {"ok": True}
