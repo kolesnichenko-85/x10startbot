@@ -1,7 +1,7 @@
 import sqlite3
 import os
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 DB_PATH = os.getenv("DATABASE_PATH", "/data/drop1.db")
 
@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS purchases (
     telegram_charge_id TEXT UNIQUE,
     created_at TEXT NOT NULL,
     paid_at TEXT,
+    pool_day TEXT,
+    reservation_expires_at TEXT,
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
@@ -72,9 +74,91 @@ def conn():
 def init_db():
     with conn() as c:
         c.executescript(SCHEMA)
+        # Safe migration for databases created before the global pool feature.
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(purchases)").fetchall()}
+        if "pool_day" not in cols:
+            c.execute("ALTER TABLE purchases ADD COLUMN pool_day TEXT")
+        if "reservation_expires_at" not in cols:
+            c.execute("ALTER TABLE purchases ADD COLUMN reservation_expires_at TEXT")
+
+def utcnow_dt():
+    return datetime.now(timezone.utc)
 
 def utcnow():
-    return datetime.now(timezone.utc).isoformat()
+    return utcnow_dt().isoformat()
+
+def _day_bounds(now=None):
+    now = now or utcnow_dt()
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+    return start, end
+
+def _pool_snapshot(c, base_supply: int, users_per_unlock: int, drops_per_unlock: int, max_supply: int, include_test: bool = True, now=None):
+    now = now or utcnow_dt()
+    start, end = _day_bounds(now)
+    start_iso, end_iso = start.isoformat(), end.isoformat()
+    day = start.date().isoformat()
+
+    new_users = c.execute(
+        "SELECT COUNT(*) AS n FROM users WHERE created_at>=? AND created_at<?",
+        (start_iso, end_iso)
+    ).fetchone()["n"]
+
+    unlocked_steps = new_users // max(1, users_per_unlock)
+    unlocked_bonus = unlocked_steps * max(0, drops_per_unlock)
+    supply = min(max_supply, base_supply + unlocked_bonus)
+
+    if include_test:
+        opened = c.execute(
+            """SELECT COUNT(*) AS n
+               FROM owned_items oi
+               JOIN purchases p ON p.id=oi.purchase_id
+               WHERE oi.acquired_at>=? AND oi.acquired_at<? AND p.kind IN ('drop','test')""",
+            (start_iso, end_iso)
+        ).fetchone()["n"]
+    else:
+        opened = c.execute(
+            """SELECT COUNT(*) AS n
+               FROM owned_items oi
+               JOIN purchases p ON p.id=oi.purchase_id
+               WHERE oi.acquired_at>=? AND oi.acquired_at<? AND p.kind='drop'""",
+            (start_iso, end_iso)
+        ).fetchone()["n"]
+
+    active_reserved = c.execute(
+        """SELECT COUNT(*) AS n FROM purchases
+           WHERE status='pending' AND pool_day=? AND reservation_expires_at>?""",
+        (day, now.isoformat())
+    ).fetchone()["n"]
+
+    used_or_reserved = opened + active_reserved
+    remaining = max(0, supply - used_or_reserved)
+
+    if supply >= max_supply:
+        to_next_unlock = 0
+        next_unlock_drops = 0
+    else:
+        rem = new_users % max(1, users_per_unlock)
+        to_next_unlock = max(1, users_per_unlock) - rem if rem else max(1, users_per_unlock)
+        next_unlock_drops = min(max(0, drops_per_unlock), max_supply - supply)
+
+    return {
+        "day": day,
+        "base_supply": base_supply,
+        "supply": supply,
+        "opened": opened,
+        "reserved": active_reserved,
+        "remaining": remaining,
+        "new_collectors": new_users,
+        "collectors_to_next_unlock": to_next_unlock,
+        "next_unlock_drops": next_unlock_drops,
+        "max_supply": max_supply,
+        "reset_at": end.isoformat(),
+    }
+
+def daily_pool_status(base_supply: int, users_per_unlock: int, drops_per_unlock: int, max_supply: int, include_test: bool = True):
+    with conn() as c:
+        return _pool_snapshot(c, base_supply, users_per_unlock, drops_per_unlock, max_supply, include_test)
 
 def upsert_user(telegram_id: int, username: str|None, first_name: str|None, referrer_id: int|None=None):
     with conn() as c:
@@ -94,16 +178,37 @@ def get_user(telegram_id: int):
     with conn() as c:
         return c.execute("SELECT * FROM users WHERE telegram_id=?", (telegram_id,)).fetchone()
 
-def create_purchase(pid: str, telegram_id: int, stars: int, kind="drop"):
+def reserve_purchase(pid: str, telegram_id: int, stars: int, base_supply: int, users_per_unlock: int, drops_per_unlock: int, max_supply: int, kind="drop", ttl_minutes=20):
+    now = utcnow_dt()
     with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        pool = _pool_snapshot(c, base_supply, users_per_unlock, drops_per_unlock, max_supply, include_test=True, now=now)
+        if pool["remaining"] <= 0:
+            raise ValueError("daily_pool_sold_out")
+        expires = now + timedelta(minutes=ttl_minutes)
         c.execute(
-            "INSERT INTO purchases (id, telegram_id, kind, stars, status, created_at) VALUES (?,?,?,?,?,?)",
-            (pid, telegram_id, kind, stars, "pending", utcnow())
+            """INSERT INTO purchases
+               (id, telegram_id, kind, stars, status, created_at, pool_day, reservation_expires_at)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (pid, telegram_id, kind, stars, "pending", now.isoformat(), pool["day"], expires.isoformat())
         )
+        return pool
+
+def cancel_purchase(pid: str):
+    with conn() as c:
+        c.execute("UPDATE purchases SET status='cancelled' WHERE id=? AND status='pending'", (pid,))
 
 def get_purchase(pid: str):
     with conn() as c:
         return c.execute("SELECT * FROM purchases WHERE id=?", (pid,)).fetchone()
+
+def purchase_reservation_valid(p):
+    if not p or p["status"] != "pending" or not p["reservation_expires_at"]:
+        return False
+    try:
+        return datetime.fromisoformat(p["reservation_expires_at"]) > utcnow_dt()
+    except Exception:
+        return False
 
 def _next_serial(c, character_id: str):
     serial = c.execute("SELECT last_serial FROM character_serials WHERE character_id=?", (character_id,)).fetchone()
@@ -116,6 +221,7 @@ def _next_serial(c, character_id: str):
 
 def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
     with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
         p = c.execute("SELECT * FROM purchases WHERE id=?", (pid,)).fetchone()
         if not p:
             raise ValueError("purchase_not_found")
@@ -123,6 +229,8 @@ def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
         if p["status"] == "paid":
             item = c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
             return item, False
+        if p["status"] != "pending":
+            raise ValueError("purchase_not_pending")
 
         next_serial = _next_serial(c, character_id)
         now = utcnow()
@@ -152,14 +260,21 @@ def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
         item = c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
         return item, True
 
-def mark_test_and_mint(pid: str, telegram_id: int, character_id: str):
-    """Free QA mint. Exercises draw/serial/collection/XP without Telegram payment or referral rewards."""
+def mark_test_and_mint(pid: str, telegram_id: int, character_id: str, base_supply: int, users_per_unlock: int, drops_per_unlock: int, max_supply: int):
+    """Free QA mint. Exercises pool/draw/serial/collection/XP without Telegram payment or referral rewards."""
+    now_dt = utcnow_dt()
     with conn() as c:
-        now = utcnow()
+        c.execute("BEGIN IMMEDIATE")
+        pool = _pool_snapshot(c, base_supply, users_per_unlock, drops_per_unlock, max_supply, include_test=True, now=now_dt)
+        if pool["remaining"] <= 0:
+            raise ValueError("daily_pool_sold_out")
+        now = now_dt.isoformat()
         next_serial = _next_serial(c, character_id)
         c.execute(
-            "INSERT INTO purchases (id, telegram_id, kind, stars, status, telegram_charge_id, created_at, paid_at) VALUES (?,?,?,?,?,?,?,?)",
-            (pid, telegram_id, "test", 0, "paid", f"test:{pid}", now, now)
+            """INSERT INTO purchases
+               (id, telegram_id, kind, stars, status, telegram_charge_id, created_at, paid_at, pool_day)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (pid, telegram_id, "test", 0, "paid", f"test:{pid}", now, now, pool["day"])
         )
         c.execute(
             "INSERT INTO owned_items (telegram_id, character_id, serial_no, purchase_id, acquired_at) VALUES (?,?,?,?,?)",
