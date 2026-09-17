@@ -6,14 +6,16 @@
 <title>DROP1</title>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <style>
-:root{--bg:#0b0c10;--card:#151821;--text:#f5f7fb;--muted:#8e96a8;--line:#252a37}
+:root{--bg:#0b0c10;--card:#151821;--text:#f5f7fb;--muted:#8e96a8;--line:#252a37;--cyan:#62e8ff;--violet:#aa7cff}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at 50% -20%,#242a3b 0,#0b0c10 45%);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,Inter,Segoe UI,sans-serif;min-height:100vh}
 .wrap{max-width:520px;margin:auto;padding:18px 16px 110px}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .brand{font-weight:900;letter-spacing:.12em;font-size:22px}
 .pill{background:#171a24;border:1px solid var(--line);border-radius:99px;padding:8px 11px;color:#cbd1dd}
-.hero{text-align:center;padding:14px 0 8px}
+.pool{background:linear-gradient(145deg,#151a27,#10131b);border:1px solid #2e3547;border-radius:20px;padding:16px;margin-bottom:20px;box-shadow:0 18px 50px #0005}
+.pooltop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pooltitle{font-size:12px;font-weight:900;letter-spacing:.13em;color:#b7c0d3}.poolleft{font-size:12px;color:var(--muted);text-align:right}.poolnum{font-size:34px;line-height:1;font-weight:950;margin:9px 0 4px}.poolsub{color:var(--muted);font-size:13px}.bar{height:9px;background:#202532;border-radius:999px;overflow:hidden;margin:14px 0 10px}.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));border-radius:999px;transition:width .35s ease}.unlock{display:flex;justify-content:space-between;gap:12px;align-items:center;padding-top:8px;border-top:1px solid #262d3b;font-size:12px}.unlock strong{color:#fff}.unlock span{color:var(--muted)}
+.hero{text-align:center;padding:4px 0 8px}
 .capsule{width:190px;height:190px;border-radius:50%;margin:8px auto 18px;display:grid;place-items:center;font-size:86px;background:linear-gradient(145deg,#2b3143,#11131b);box-shadow:0 22px 65px #0009,inset 0 1px 0 #ffffff25;border:1px solid #303748;animation:float 3s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-7px) rotate(2deg)}}
 h1{font-size:30px;margin:0 0 8px}.muted{color:var(--muted)}
@@ -27,6 +29,20 @@ h1{font-size:30px;margin:0 0 8px}.muted{color:var(--muted)}
 <body>
 <div class="wrap">
   <div class="top"><div class="brand">DROP1</div><div class="pill" id="xp">0 XP</div></div>
+
+  <div class="pool">
+    <div class="pooltop">
+      <div><div class="pooltitle">GLOBAL DROP POOL</div><div class="poolnum"><span id="remaining">—</span> LEFT</div></div>
+      <div class="poolleft"><span id="openedSupply">— / — opened</span><br><span id="reset">reset —</span></div>
+    </div>
+    <div class="bar"><i id="poolBar"></i></div>
+    <div class="poolsub" id="poolSub">Live worldwide daily supply.</div>
+    <div class="unlock">
+      <strong id="unlockText">Community unlock loading…</strong>
+      <span id="newCollectors">— new collectors today</span>
+    </div>
+  </div>
+
   <div class="hero">
     <div class="capsule">◉</div>
     <h1>What will you pull?</h1>
@@ -44,12 +60,14 @@ h1{font-size:30px;margin:0 0 8px}.muted{color:var(--muted)}
 </div>
 <div class="toast" id="toast"></div>
 <script>
-const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}const initData=tg?.initData||"dev";let state=null;
+const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();}const initData=tg?.initData||"dev";let state=null;let resetTimer=null;
 async function api(path,opts={}){opts.headers={...(opts.headers||{}),"X-Telegram-Init-Data":initData};const r=await fetch(path,opts);if(!r.ok)throw new Error(await r.text());return await r.json();}
 function toast(s){const x=document.getElementById("toast");x.textContent=s;x.style.display="block";setTimeout(()=>x.style.display="none",2600)}
-function render(){document.getElementById("xp").textContent=`${state.user.xp} XP`;document.getElementById("owned").textContent=state.collection.length;document.getElementById("unique").textContent=state.unique_count;document.getElementById("dust").textContent=state.user.dust;document.getElementById("openBtn").textContent=state.test_mode?"OPEN TEST DROP · 0 ⭐":`OPEN DROP · ${state.price_stars} ⭐`;document.getElementById("testNote").style.display=state.test_mode?"block":"none";const root=document.getElementById("collection");if(!state.collection.length){root.innerHTML='<div class="empty" style="grid-column:1/-1">Your first creature is still inside a capsule.</div>';return}root.innerHTML=state.collection.map(c=>`<div class="card ${c.rarity}"><div class="badge">${c.rarity}</div><div class="emoji">${c.emoji}</div><div class="name">${c.name}</div><div class="meta">#${String(c.serial_no).padStart(6,"0")} · PWR ${c.power} · LCK ${c.luck}</div></div>`).join("");}
+function countdown(){if(!state?.pool?.reset_at)return;const d=Math.max(0,new Date(state.pool.reset_at).getTime()-Date.now());const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);document.getElementById("reset").textContent=`reset ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")} UTC`;}
+function renderPool(){const p=state.pool||{};document.getElementById("remaining").textContent=p.remaining??"—";document.getElementById("openedSupply").textContent=`${p.opened??0} / ${p.supply??0} opened`;const pct=p.supply?Math.min(100,Math.max(0,(p.opened/p.supply)*100)):0;document.getElementById("poolBar").style.width=`${pct}%`;document.getElementById("newCollectors").textContent=`${p.new_collectors??0} new collectors today`;document.getElementById("poolSub").textContent=`Today unlocked: ${p.supply??0} · Daily max: ${p.max_supply??0}`;const u=document.getElementById("unlockText");if((p.next_unlock_drops??0)>0){u.textContent=`${p.collectors_to_next_unlock} more collectors → +${p.next_unlock_drops} DROPS`;}else{u.textContent="Today's community pool is fully unlocked";}countdown();if(resetTimer)clearInterval(resetTimer);resetTimer=setInterval(countdown,1000);}
+function render(){document.getElementById("xp").textContent=`${state.user.xp} XP`;document.getElementById("owned").textContent=state.collection.length;document.getElementById("unique").textContent=state.unique_count;document.getElementById("dust").textContent=state.user.dust;renderPool();const b=document.getElementById("openBtn");if((state.pool?.remaining??0)<=0){b.textContent="SOLD OUT TODAY";b.disabled=true;}else{b.disabled=false;b.textContent=state.test_mode?"OPEN TEST DROP · 0 ⭐":`OPEN DROP · ${state.price_stars} ⭐`;}document.getElementById("testNote").style.display=state.test_mode?"block":"none";const root=document.getElementById("collection");if(!state.collection.length){root.innerHTML='<div class="empty" style="grid-column:1/-1">Your first creature is still inside a capsule.</div>';return}root.innerHTML=state.collection.map(c=>`<div class="card ${c.rarity}"><div class="badge">${c.rarity}</div><div class="emoji">${c.emoji}</div><div class="name">${c.name}</div><div class="meta">#${String(c.serial_no).padStart(6,"0")} · PWR ${c.power} · LCK ${c.luck}</div></div>`).join("");}
 async function refresh(){state=await api("/api/bootstrap");render()}
-document.getElementById("openBtn").onclick=async()=>{const b=document.getElementById("openBtn");b.disabled=true;try{if(state?.test_mode){const r=await api("/api/test/drop",{method:"POST"});toast(`${r.character.rarity.toUpperCase()} · ${r.character.name} #${String(r.serial_no).padStart(6,"0")}`);await refresh();return}const beforeCount=state?.collection?.length||0;const inv=await api("/api/invoice/drop",{method:"POST"});if(tg?.openInvoice){tg.openInvoice(inv.invoice_url,async status=>{if(status==="paid"){toast("Payment confirmed. Minting your DROP…");for(let i=0;i<10;i++){await new Promise(r=>setTimeout(r,650));await refresh();if(state.collection.length>beforeCount)break}}else if(status==="cancelled"){toast("Cancelled")}})}else{window.location.href=inv.invoice_url}}catch(e){toast(state?.test_mode?"Test DROP failed":"Could not create invoice");console.error(e)}finally{b.disabled=false}};
+document.getElementById("openBtn").onclick=async()=>{const b=document.getElementById("openBtn");if((state?.pool?.remaining??0)<=0)return;b.disabled=true;try{if(state?.test_mode){const r=await api("/api/test/drop",{method:"POST"});toast(`${r.character.rarity.toUpperCase()} · ${r.character.name} #${String(r.serial_no).padStart(6,"0")}`);await refresh();return}const beforeCount=state?.collection?.length||0;const inv=await api("/api/invoice/drop",{method:"POST"});if(inv.pool){state.pool=inv.pool;renderPool();}if(tg?.openInvoice){tg.openInvoice(inv.invoice_url,async status=>{if(status==="paid"){toast("Payment confirmed. Minting your DROP…");for(let i=0;i<10;i++){await new Promise(r=>setTimeout(r,650));await refresh();if(state.collection.length>beforeCount)break}}else if(status==="cancelled"){toast("Cancelled");await refresh();}})}else{window.location.href=inv.invoice_url}}catch(e){const msg=String(e||"");toast(msg.includes("sold out")?"Today's global pool is sold out":(state?.test_mode?"Test DROP failed":"Could not create invoice"));console.error(e);await refresh().catch(()=>{});}finally{if((state?.pool?.remaining??0)>0)b.disabled=false}};
 document.getElementById("shareBtn").onclick=async()=>{if(!state?.share_url)return toast("Share link unavailable");const text=`I’m collecting DROP1 creatures. Open your first DROP: ${state.share_url}`;if(tg?.openTelegramLink)tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(state.share_url)}&text=${encodeURIComponent(text)}`);else navigator.clipboard?.writeText(state.share_url)};
 refresh().catch(e=>{console.error(e);toast("Open this app inside Telegram")});
 </script>
