@@ -8,7 +8,11 @@ load_dotenv()
 
 from .auth import validate_init_data
 from .catalog import CATALOG
-from .db import init_db, upsert_user, get_user, create_purchase, get_purchase, mark_paid_and_mint, mark_test_and_mint, collection, leaderboard
+from .db import (
+    init_db, upsert_user, get_user, reserve_purchase, cancel_purchase, get_purchase,
+    purchase_reservation_valid, mark_paid_and_mint, mark_test_and_mint, collection,
+    leaderboard, daily_pool_status
+)
 from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 
 DROP_PRICE_STARS = int(os.getenv("DROP_PRICE_STARS", "50"))
@@ -16,6 +20,12 @@ FREE_TEST_MODE = os.getenv("FREE_TEST_MODE", "false").lower() == "true"
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 SUPPORT_HANDLE = os.getenv("SUPPORT_HANDLE", "")
+
+DAILY_POOL_BASE = int(os.getenv("DAILY_POOL_BASE", "200"))
+DAILY_POOL_USERS_PER_UNLOCK = int(os.getenv("DAILY_POOL_USERS_PER_UNLOCK", "10"))
+DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
+DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
+GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -27,6 +37,15 @@ async def startup():
         await setup_bot(os.getenv("BASE_URL",""), WEBHOOK_SECRET)
     except Exception as e:
         print(f"Telegram setup skipped/failed: {e}")
+
+def pool_status():
+    return daily_pool_status(
+        DAILY_POOL_BASE,
+        DAILY_POOL_USERS_PER_UNLOCK,
+        DAILY_POOL_DROPS_PER_UNLOCK,
+        DAILY_POOL_MAX,
+        include_test=True,
+    )
 
 def auth_user(init_data: str | None):
     try:
@@ -63,7 +82,12 @@ async def home():
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "bot_configured": bool(os.getenv("BOT_TOKEN")), "free_test_mode": FREE_TEST_MODE}
+    return {
+        "ok": True,
+        "bot_configured": bool(os.getenv("BOT_TOKEN")),
+        "free_test_mode": FREE_TEST_MODE,
+        "pool": pool_status(),
+    }
 
 @app.get("/odds", response_class=HTMLResponse)
 async def odds_page():
@@ -72,7 +96,7 @@ async def odds_page():
 @app.get("/terms", response_class=HTMLResponse)
 async def terms_page():
     support = SUPPORT_HANDLE or "the support contact shown in the bot"
-    return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Terms — MVP</h1><p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible. The collectible received is randomly selected according to the published Season odds.</p><p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation. A secondary-market resale feature is not part of this MVP.</p><p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p></body></html>"""
+    return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Terms — MVP</h1><p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible. The collectible received is randomly selected according to the published Season odds.</p><p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation. A secondary-market resale feature is not part of this MVP.</p><p>Daily DROP availability is limited by the currently unlocked global pool and may sell out before the daily reset.</p><p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p></body></html>"""
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
@@ -88,6 +112,7 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         c = by_id[row["character_id"]]
         items.append({**public_character(c), "serial_no": row["serial_no"], "acquired_at": row["acquired_at"]})
     unique = len(set(i["id"] for i in items))
+    pool = pool_status()
     return {
         "user": {"id":tid,"username":u["username"],"first_name":u["first_name"],"xp":u["xp"],"dust":u["dust"]},
         "price_stars": DROP_PRICE_STARS,
@@ -95,6 +120,8 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         "catalog_total": len(CATALOG),
         "collection": items,
         "unique_count": unique,
+        "pool": pool,
+        "genesis_supply": GENESIS_SUPPLY,
         "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else ""
     }
 
@@ -113,11 +140,23 @@ async def test_drop(x_telegram_init_data: str | None = Header(default=None)):
     tid, _ = auth_user(x_telegram_init_data)
     pid = "test_" + uuid.uuid4().hex
     character = choose_character()
-    item = mark_test_and_mint(pid, tid, character["id"])
+    try:
+        item = mark_test_and_mint(
+            pid, tid, character["id"],
+            DAILY_POOL_BASE,
+            DAILY_POOL_USERS_PER_UNLOCK,
+            DAILY_POOL_DROPS_PER_UNLOCK,
+            DAILY_POOL_MAX,
+        )
+    except ValueError as e:
+        if str(e) == "daily_pool_sold_out":
+            raise HTTPException(status_code=409, detail="Today's global DROP pool is sold out")
+        raise
     return {
         "ok": True,
         "character": public_character(character),
-        "serial_no": item["serial_no"]
+        "serial_no": item["serial_no"],
+        "pool": pool_status(),
     }
 
 @app.post("/api/invoice/drop")
@@ -126,12 +165,25 @@ async def invoice_drop(x_telegram_init_data: str | None = Header(default=None)):
         raise HTTPException(status_code=409, detail="Paid DROP disabled while free test mode is active")
     tid, _ = auth_user(x_telegram_init_data)
     pid = uuid.uuid4().hex
-    create_purchase(pid, tid, DROP_PRICE_STARS, "drop")
+    try:
+        reserve_purchase(
+            pid, tid, DROP_PRICE_STARS,
+            DAILY_POOL_BASE,
+            DAILY_POOL_USERS_PER_UNLOCK,
+            DAILY_POOL_DROPS_PER_UNLOCK,
+            DAILY_POOL_MAX,
+            kind="drop",
+        )
+    except ValueError as e:
+        if str(e) == "daily_pool_sold_out":
+            raise HTTPException(status_code=409, detail="Today's global DROP pool is sold out")
+        raise
     try:
         url = await create_drop_invoice(pid, DROP_PRICE_STARS)
     except Exception as e:
+        cancel_purchase(pid)
         raise HTTPException(status_code=502, detail=str(e))
-    return {"invoice_url": url, "purchase_id": pid}
+    return {"invoice_url": url, "purchase_id": pid, "pool": pool_status()}
 
 @app.post("/telegram/webhook/{secret}")
 async def telegram_webhook(secret: str, request: Request):
@@ -147,8 +199,16 @@ async def telegram_webhook(secret: str, request: Request):
         pid = payload.split(":",1)[1]
         p = get_purchase(pid)
         payer_id = int((pcq.get("from") or {}).get("id", 0))
-        valid = bool(p and p["status"] == "pending" and p["stars"] == pcq.get("total_amount") and p["telegram_id"] == payer_id)
-        await answer_precheckout(pcq["id"], valid, None if valid else "This DROP belongs to another session or is no longer available.")
+        valid = bool(
+            p and p["status"] == "pending"
+            and p["stars"] == pcq.get("total_amount")
+            and p["telegram_id"] == payer_id
+            and purchase_reservation_valid(p)
+        )
+        await answer_precheckout(
+            pcq["id"], valid,
+            None if valid else "This DROP reservation expired or is no longer available. Please open a new DROP."
+        )
         return {"ok": True}
 
     msg = update.get("message") or {}
