@@ -35,11 +35,20 @@ async def send_message(chat_id: int, text: str, reply_markup=None):
     return await tg("sendMessage", payload)
 
 async def setup_bot(base_url: str, webhook_secret: str):
-    if not BOT_TOKEN or not base_url or not webhook_secret:
-        return False
+    if not BOT_TOKEN:
+        raise RuntimeError("BOT_TOKEN missing in Render environment")
+    if not base_url:
+        raise RuntimeError("BASE_URL missing in Render environment")
+    if not webhook_secret:
+        raise RuntimeError("WEBHOOK_SECRET missing in Render environment")
+
+    me = await tg("getMe", {})
+    print(f"Telegram token OK for @{me.get('username', 'unknown')}", flush=True)
+
     base_url = base_url.rstrip("/")
+    webhook_url = f"{base_url}/telegram/webhook/{webhook_secret}"
     await tg("setWebhook", {
-        "url": f"{base_url}/telegram/webhook/{webhook_secret}",
+        "url": webhook_url,
         "allowed_updates": ["message", "pre_checkout_query"]
     })
     await tg("setChatMenuButton", {
@@ -58,4 +67,5 @@ async def setup_bot(base_url: str, webhook_secret: str):
             {"command":"support","description":"Support"}
         ]
     })
+    print(f"Telegram webhook configured: {webhook_url}", flush=True)
     return True
