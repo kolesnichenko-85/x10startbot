@@ -1,17 +1,18 @@
 import os, uuid, secrets
 from fastapi import FastAPI, Request, HTTPException, Header
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from .auth import validate_init_data
-from .catalog import CATALOG, RARITY_ORDER
-from .db import init_db, upsert_user, get_user, create_purchase, get_purchase, mark_paid_and_mint, collection, leaderboard
+from .catalog import CATALOG
+from .db import init_db, upsert_user, get_user, create_purchase, get_purchase, mark_paid_and_mint, mark_test_and_mint, collection, leaderboard
 from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 
 DROP_PRICE_STARS = int(os.getenv("DROP_PRICE_STARS", "50"))
+FREE_TEST_MODE = os.getenv("FREE_TEST_MODE", "false").lower() == "true"
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 SUPPORT_HANDLE = os.getenv("SUPPORT_HANDLE", "")
@@ -62,7 +63,7 @@ async def home():
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "bot_configured": bool(os.getenv("BOT_TOKEN"))}
+    return {"ok": True, "bot_configured": bool(os.getenv("BOT_TOKEN")), "free_test_mode": FREE_TEST_MODE}
 
 @app.get("/odds", response_class=HTMLResponse)
 async def odds_page():
@@ -87,7 +88,15 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         c = by_id[row["character_id"]]
         items.append({**public_character(c), "serial_no": row["serial_no"], "acquired_at": row["acquired_at"]})
     unique = len(set(i["id"] for i in items))
-    return {"user": {"id":tid,"username":u["username"],"first_name":u["first_name"],"xp":u["xp"],"dust":u["dust"]},"price_stars": DROP_PRICE_STARS,"catalog_total": len(CATALOG),"collection": items,"unique_count": unique,"share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else ""}
+    return {
+        "user": {"id":tid,"username":u["username"],"first_name":u["first_name"],"xp":u["xp"],"dust":u["dust"]},
+        "price_stars": DROP_PRICE_STARS,
+        "test_mode": FREE_TEST_MODE,
+        "catalog_total": len(CATALOG),
+        "collection": items,
+        "unique_count": unique,
+        "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else ""
+    }
 
 @app.get("/api/catalog")
 async def catalog_api():
@@ -97,8 +106,24 @@ async def catalog_api():
 async def leaderboard_api():
     return {"leaders":[dict(r) for r in leaderboard()]}
 
+@app.post("/api/test/drop")
+async def test_drop(x_telegram_init_data: str | None = Header(default=None)):
+    if not FREE_TEST_MODE:
+        raise HTTPException(status_code=404)
+    tid, _ = auth_user(x_telegram_init_data)
+    pid = "test_" + uuid.uuid4().hex
+    character = choose_character()
+    item = mark_test_and_mint(pid, tid, character["id"])
+    return {
+        "ok": True,
+        "character": public_character(character),
+        "serial_no": item["serial_no"]
+    }
+
 @app.post("/api/invoice/drop")
 async def invoice_drop(x_telegram_init_data: str | None = Header(default=None)):
+    if FREE_TEST_MODE:
+        raise HTTPException(status_code=409, detail="Paid DROP disabled while free test mode is active")
     tid, _ = auth_user(x_telegram_init_data)
     pid = uuid.uuid4().hex
     create_purchase(pid, tid, DROP_PRICE_STARS, "drop")
