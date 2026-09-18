@@ -157,7 +157,10 @@ async def test_drop(x_telegram_init_data: str | None = Header(default=None)):
         raise HTTPException(status_code=404)
     tid, _ = auth_user(x_telegram_init_data)
     pid = "test_" + uuid.uuid4().hex
-    character = choose_character()
+    # Free visual QA mode intentionally hatches the flagship specimen so the
+    # reveal/collection/market UX can be reviewed deterministically. Paid drops
+    # continue to use the real rarity-weighted draw.
+    character = next((c for c in CATALOG if c["id"] == "r002"), choose_character())
     try:
         item = mark_test_and_mint(
             pid, tid, character["id"],
