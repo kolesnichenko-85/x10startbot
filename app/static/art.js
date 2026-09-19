@@ -1,11 +1,13 @@
 window.DROP1_ART={
   'c001':'/static/assets/species/pebbleback.webp',
+  'r001':'/static/assets/species/crystal-ankyl.png',
   'r002':'/static/assets/neon-raptor.webp'
 };
 window.DROP1_SPIN={
   'r002':['/static/assets/neon-raptor.webp']
 };
 window.DROP1_MODEL={
+  'r001':'/static/models/crystal-ankyl.glb',
   'r002':'/static/models/neon-raptor.glb'
 };
 window.DROP1_PHYSICAL={};
