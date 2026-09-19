@@ -434,12 +434,17 @@ async def item_provenance(item_id: int):
     with conn() as c:
         item = c.execute("SELECT * FROM owned_items WHERE id=?", (item_id,)).fetchone()
         if not item:
-            raise HTTPException(status_code=404, detail="Card not found")
+            raise HTTPException(status_code=404, detail="Creature not found")
         events = c.execute(
-            "SELECT * FROM ownership_events WHERE item_id=? ORDER BY id ASC",
+            "SELECT event_type, created_at FROM ownership_events WHERE item_id=? ORDER BY id ASC",
             (item_id,),
         ).fetchall()
+        public = public_item(item, cmap)
+        public.pop("owner_id", None)
+        history = [{"event_type": e["event_type"], "created_at": e["created_at"]} for e in events]
         return {
-            "item": public_item(item, cmap),
-            "history": [dict(e) for e in events],
+            "item": public,
+            "minted_at": history[0]["created_at"] if history else item["acquired_at"],
+            "trade_count": sum(1 for e in history if e["event_type"] == "trade"),
+            "history": history,
         }
