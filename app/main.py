@@ -11,7 +11,7 @@ from .catalog import CATALOG
 from .db import (
     init_db, upsert_user, get_user, reserve_purchase, cancel_purchase, get_purchase,
     purchase_reservation_valid, mark_paid_and_mint, mark_test_and_mint, collection,
-    leaderboard, daily_pool_status
+    leaderboard, daily_pool_status, track_event
 )
 from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 from .market_api import router as market_router, init_market
@@ -114,6 +114,36 @@ async def terms_page():
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
     return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Privacy — MVP</h1><p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection, purchases, referrals, XP, trade offers and support.</p><p>Payment identifiers are stored to reconcile purchases and handle refunds or disputes. Ownership-transfer history is stored to preserve creature provenance.</p></body></html>"""
+
+
+@app.post("/api/events")
+async def product_event(request: Request, x_telegram_init_data: str | None = Header(default=None)):
+    tid, _ = auth_user(x_telegram_init_data)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    event_name = str(body.get("event") or "").strip().lower()
+    allowed = {
+        "app_open","hatch_click","hatch_complete","specimen_open","market_open",
+        "listing_create","offer_create","share_click","physical_interest"
+    }
+    if event_name not in allowed:
+        raise HTTPException(status_code=400, detail="Unknown event")
+    item_id = body.get("item_id")
+    try:
+        item_id = int(item_id) if item_id is not None else None
+    except Exception:
+        item_id = None
+    track_event(
+        tid,
+        event_name,
+        item_id=item_id,
+        character_id=str(body.get("character_id") or "")[:32] or None,
+        source=str(body.get("source") or "")[:64] or None,
+        metadata=str(body.get("metadata") or "")[:500] or None,
+    )
+    return {"ok": True}
 
 @app.get("/api/bootstrap")
 async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
