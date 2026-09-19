@@ -46,6 +46,7 @@ async def setup_bot(base_url: str, webhook_secret: str):
     print(f"Telegram token OK for @{me.get('username', 'unknown')}", flush=True)
 
     base_url = base_url.rstrip("/")
+    launch_url = f"{base_url}/?build=ios21"
     webhook_url = f"{base_url}/telegram/webhook/{webhook_secret}"
     await tg("setWebhook", {
         "url": webhook_url,
@@ -55,7 +56,7 @@ async def setup_bot(base_url: str, webhook_secret: str):
         "menu_button": {
             "type": "web_app",
             "text": "Open DROP1",
-            "web_app": {"url": base_url}
+            "web_app": {"url": launch_url}
         }
     })
     await tg("setMyCommands", {
