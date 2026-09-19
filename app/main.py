@@ -94,7 +94,8 @@ async def health():
         "free_test_mode": FREE_TEST_MODE,
         "pool": pool_status(),
         "trade_market": True,
-        "paid_resale": False,\n        "version": APP_VERSION,
+        "paid_resale": False,
+        "version": APP_VERSION,
     }
 
 @app.get("/odds", response_class=HTMLResponse)
@@ -263,7 +264,7 @@ async def telegram_webhook(secret: str, request: Request):
             await send_message(chat_id, "The leaderboard is empty. Be the first collector.")
         return {"ok": True}
     if chat_id and text.startswith("/odds"):
-        await send_message(chat_id, "Season 0 odds:\nCommon 65% · Rare 25% · Epic 8% · Legendary 1.8% · Mythic 0.2%" + (f"\n{base}/odds" if base else ""))
+        await send_message(chat_id, "Primal Hatch odds:\nCommon 65% · Rare 25% · Epic 8% · Legendary 1.8% · Mythic 0.2%" + (f"\n{base}/odds" if base else ""))
         return {"ok": True}
     if chat_id and text.startswith("/terms"):
         await send_message(chat_id, f"{base}/terms" if base else "Terms will be available in the Mini App.")
@@ -289,7 +290,7 @@ async def telegram_webhook(secret: str, request: Request):
                     markup = {"inline_keyboard": [[{"text": "Open collection", "web_app": {"url": base}}]]} if base else None
                     await send_message(
                         p["telegram_id"],
-                        f"🎉 {rarity} DROP!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour collectible is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),
+                        f"🎉 {rarity} DROP!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour creature is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),
                         markup,
                     )
         return {"ok": True}
