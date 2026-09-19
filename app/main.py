@@ -28,7 +28,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.9.0-beta"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -96,6 +96,10 @@ async def health():
         "trade_market": True,
         "paid_resale": False,
         "version": APP_VERSION,
+        "stage": "closed_beta",
+        "storage": "sqlite",
+        "persistent_storage": not os.getenv("DATABASE_PATH", "/tmp/drop1.db").startswith("/tmp/"),
+        "flagship_3d": True,
     }
 
 @app.get("/odds", response_class=HTMLResponse)
