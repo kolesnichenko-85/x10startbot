@@ -1,6 +1,7 @@
 (function(){
 window.DROP1_PREMIUM_HATCH=true;
-const EGG="/static/assets/primal-egg.webp";
+const EGG="/static/assets/primal-egg.png";
+const EGG_FALLBACK="/static/assets/primal-egg.png";
 const css=`
 .capsuleScene .capsule{
  width:188px!important;height:224px!important;border:0!important;border-radius:0!important;
@@ -32,7 +33,7 @@ const css=`
 .p6Creature img{position:absolute;left:0;top:-7%;width:100%;height:126%;object-fit:cover;object-position:50% 18%;display:block}
 .p6Scan{position:absolute;z-index:8;left:7%;right:7%;top:16%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),#fff,var(--accent),transparent);box-shadow:0 0 18px var(--accent),0 0 38px var(--accent);opacity:0}
 .p6EggWrap{position:absolute;z-index:11;left:50%;top:47%;width:220px;height:270px;transform:translate(-50%,-50%) scale(.9);display:grid;place-items:center;will-change:transform,filter,opacity}
-.p6EggImg{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 22px 26px #000c) drop-shadow(0 0 20px color-mix(in srgb,var(--accent) 38%,transparent)) drop-shadow(0 0 52px color-mix(in srgb,var(--accent2) 30%,transparent));user-select:none;-webkit-user-drag:none}
+.p6EggImg{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .18s ease;filter:drop-shadow(0 22px 26px #000c) drop-shadow(0 0 20px color-mix(in srgb,var(--accent) 38%,transparent)) drop-shadow(0 0 52px color-mix(in srgb,var(--accent2) 30%,transparent));user-select:none;-webkit-user-drag:none}.p6EggImg.ready{opacity:1}.p6EggCssFallback{position:absolute;width:168px;height:214px;border-radius:50% 50% 47% 53%/58% 58% 42% 42%;background:radial-gradient(circle at 36% 23%,#eaffff 0,#91efff 10%,#5f76d8 36%,#2b214e 70%,#090d18 100%);border:2px solid #77eaff;box-shadow:0 0 22px #5ee5ff88,0 0 58px #704dff55,inset -18px -24px 32px #0b102b88;opacity:.94}
 .p6EggAura{position:absolute;inset:12%;border-radius:50%;z-index:-1;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 18%,transparent),transparent 68%);filter:blur(16px);opacity:.65}
 .p6Cracks{position:absolute;inset:0;pointer-events:none;opacity:0;filter:drop-shadow(0 0 7px var(--accent)) drop-shadow(0 0 18px var(--accent))}
 .p6Cracks:before,.p6Cracks:after{content:"";position:absolute;background:#f4ffff;transform-origin:top center;clip-path:polygon(42% 0,100% 0,54% 19%,92% 21%,26% 48%,72% 50%,0 100%,27% 62%,2% 63%,55% 32%,14% 31%)}
@@ -62,8 +63,14 @@ function showRevealV6(item){
  const rr=document.getElementById('revealRarity'),ra=document.getElementById('revealArt'),rn=document.getElementById('revealName'),rs=document.getElementById('revealSerial'),box=r.querySelector('.revealBox');
  if(rr)rr.textContent='';if(ra)ra.innerHTML='';if(rn)rn.textContent='';if(rs)rs.textContent='';if(box){box.style.opacity='0';box.style.transform='translateY(24px)'}
  const url=artUrl(item),scene=document.createElement('div');scene.className='p6Scene';
- scene.innerHTML=`<div class="p6Grid"></div><div class="p6Top"><div class="p6Kicker">DROP1 // PRIMAL HATCH</div><div class="p6Signal">LIFE SIGNAL</div></div><div class="p6Chamber"><div class="p6Creature">${url?`<img src="${url}" alt="${item.name||'Creature'}">`:'<div style="font-size:130px;display:grid;place-items:center;height:100%">🦖</div>'}</div><div class="p6Scan"></div><div class="p6Flash"></div><div class="p6EggWrap"><div class="p6EggAura"></div><img class="p6EggImg" src="${EGG}" alt="Primal egg"><div class="p6Cracks"></div></div></div><div class="p6Dust"></div><div class="p6Status">INCUBATION LOCKED</div><div class="p6Meta"><div class="p6Rarity">◆ ${String(item.rarity||'common').toUpperCase()}</div><div class="p6Name">${item.name||'Creature'}</div><div class="p6Serial">#${String(item.serial_no||0).padStart(6,'0')} · PWR ${item.power||0} · LCK ${item.luck||0}</div></div>`;
+ scene.innerHTML=`<div class="p6Grid"></div><div class="p6Top"><div class="p6Kicker">DROP1 // PRIMAL HATCH</div><div class="p6Signal">LIFE SIGNAL</div></div><div class="p6Chamber"><div class="p6Creature">${url?`<img src="${url}" alt="${item.name||'Creature'}">`:'<div style="font-size:130px;display:grid;place-items:center;height:100%">🦖</div>'}</div><div class="p6Scan"></div><div class="p6Flash"></div><div class="p6EggWrap"><div class="p6EggAura"></div><div class="p6EggCssFallback"></div><img class="p6EggImg" src="${EGG}" alt="Primal egg"><div class="p6Cracks"></div></div></div><div class="p6Dust"></div><div class="p6Status">INCUBATION LOCKED</div><div class="p6Meta"><div class="p6Rarity">◆ ${String(item.rarity||'common').toUpperCase()}</div><div class="p6Name">${item.name||'Creature'}</div><div class="p6Serial">#${String(item.serial_no||0).padStart(6,'0')} · PWR ${item.power||0} · LCK ${item.luck||0}</div></div>`;
  r.insertBefore(scene,r.firstChild);
+ const eggImg=scene.querySelector('.p6EggImg'),eggFallback=scene.querySelector('.p6EggCssFallback');
+ if(eggImg){
+   const show=()=>{eggImg.classList.add('ready');if(eggFallback)eggFallback.style.opacity='0'};
+   if(eggImg.complete&&eggImg.naturalWidth>0)show(); else eggImg.addEventListener('load',show,{once:true});
+   eggImg.addEventListener('error',()=>{eggImg.remove();if(eggFallback)eggFallback.style.opacity='1'},{once:true});
+ }
  const top=scene.querySelector('.p6Top'),ch=scene.querySelector('.p6Chamber'),creature=scene.querySelector('.p6Creature'),scan=scene.querySelector('.p6Scan'),egg=scene.querySelector('.p6EggWrap'),cracks=scene.querySelector('.p6Cracks'),flash=scene.querySelector('.p6Flash'),status=scene.querySelector('.p6Status'),meta=scene.querySelector('.p6Meta'),dust=scene.querySelector('.p6Dust');
  hatchSound();haptics();addDust(dust);
  top.animate([{opacity:0,transform:'translateY(-7px)'},{opacity:1,transform:'translateY(0)'}],{duration:420,fill:'forwards'});
