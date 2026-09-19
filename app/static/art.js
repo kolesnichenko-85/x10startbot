@@ -1,8 +1,8 @@
 window.DROP1_ART={
-  'r002':'/static/assets/neon-raptor.png'
+  'r002':'/static/assets/neon-raptor.webp'
 };
 window.DROP1_SPIN={
-  'r002':['/static/assets/neon-raptor.png']
+  'r002':['/static/assets/neon-raptor.webp']
 };
 window.DROP1_PHYSICAL={};
 
@@ -17,7 +17,7 @@ window.DROP1_PHYSICAL={};
   .specTop{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px}.specTopLeft{min-width:0}.specKicker{font-size:8px;font-weight:950;letter-spacing:.22em;color:#8fa5bf}.specTitle{font-size:22px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.specClose{min-width:72px;min-height:44px;border:1px solid #35506f;background:#081321;color:#eaf6ff;border-radius:999px;padding:9px 13px;font-weight:900}
   .specStage{position:relative;margin:12px 0 12px;min-height:390px;border:1px solid #315477;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#173b66,#07101a 68%);box-shadow:0 30px 80px #000c,inset 0 0 60px #64cfff0a;touch-action:pan-y}
   .specStage:before{content:'';position:absolute;left:-20%;right:-20%;bottom:-13%;height:38%;opacity:.18;transform:perspective(520px) rotateX(64deg);background-image:linear-gradient(#5ae5ff22 1px,transparent 1px),linear-gradient(90deg,#5ae5ff22 1px,transparent 1px);background-size:34px 34px}
-  .specArt{position:absolute;inset:0;display:grid;place-items:center;transition:transform .18s ease-out;will-change:transform}.specArt img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;filter:drop-shadow(0 28px 38px #000d)}
+  .specArt{position:absolute;inset:0;display:grid;place-items:center;transition:transform .18s ease-out;will-change:transform}.specArt img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;filter:drop-shadow(0 28px 38px #000d)}
   .specFallback{width:78%;height:72%;display:grid;place-items:center;border:1px solid #304967;border-radius:28px;background:radial-gradient(circle,#22486f,#07101a 68%);font-size:120px;filter:drop-shadow(0 22px 30px #000d)}
   .specRarity{position:absolute;z-index:3;left:14px;top:14px;border:1px solid #55ddff;background:#06101de8;border-radius:999px;padding:7px 10px;font-size:9px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 20px #47d8ff33}.specRarity.epic{color:#eb8bff;border-color:#a653d8}.specRarity.legendary{color:#ffe072;border-color:#a97825}.specRarity.mythic{color:#a8ffff;border-color:#bc5cdc}
   .specInspect{position:absolute;z-index:3;left:50%;bottom:12px;transform:translateX(-50%);border:1px solid #2a415d;background:#06101de8;border-radius:999px;padding:7px 10px;color:#9fb0c5;font-size:9px;white-space:nowrap}
