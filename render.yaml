@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: drop1-game
+    runtime: python
+    repo: https://github.com/kolesnichenko-85/x10startbot
+    branch: main
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: drop1-db
+          property: connectionString
