@@ -27,7 +27,7 @@ def main():
         ROOT / "app/static/index.html",
         ROOT / "app/static/market.html",
         ROOT / "app/static/art.js",
-        ROOT / "app/static/hatch_engine_v21.js",
+        ROOT / "app/static/hatch_canvas_v22.js",
         ROOT / "docs/DROP1_PRODUCT_OS.md",
     ]
     for p in required:
@@ -37,7 +37,7 @@ def main():
         "app/static/index.html",
         "app/static/market.html",
         "app/static/art.js",
-        "app/static/hatch_engine_v21.js",
+        "app/static/hatch_canvas_v22.js",
     ])
     forbidden = ["img.theapi.app/temp/", "dnznrvs05pmza.cloudfront.net"]
     for needle in forbidden:
@@ -46,7 +46,7 @@ def main():
     index = (ROOT / "app/static/index.html").read_text()
     market = (ROOT / "app/static/market.html").read_text()
     art = (ROOT / "app/static/art.js").read_text()
-    hatch = (ROOT / "app/static/hatch_engine_v21.js").read_text()
+    hatch = (ROOT / "app/static/hatch_canvas_v22.js").read_text()
     assert "HATCH TEST EGG" in index or "HATCH EGG" in index
     assert "PROPOSE TRADE" in market
     assert "/static/models/neon-raptor.glb" in art
