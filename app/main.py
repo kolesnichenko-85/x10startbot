@@ -28,7 +28,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-app = FastAPI(title="DROP1")
+APP_VERSION = "0.5.0"\n\napp = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(market_router)
 
@@ -92,17 +92,17 @@ async def health():
         "free_test_mode": FREE_TEST_MODE,
         "pool": pool_status(),
         "trade_market": True,
-        "paid_resale": False,
+        "paid_resale": False,\n        "version": APP_VERSION,
     }
 
 @app.get("/odds", response_class=HTMLResponse)
 async def odds_page():
-    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 — Season 0 Odds</h1><p>Every paid DROP contains exactly one digital collectible.</p><ul><li>Common — 65.0%</li><li>Rare — 25.0%</li><li>Epic — 8.0%</li><li>Legendary — 1.8%</li><li>Mythic — 0.2%</li></ul><p>Collectibles do not represent money, securities, or a promise of resale value. There is no cash-out.</p></body></html>"""
+    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 — Primal Hatch Odds</h1><p>Every paid egg hatches exactly one digital creature.</p><ul><li>Common — 65.0%</li><li>Rare — 25.0%</li><li>Epic — 8.0%</li><li>Legendary — 1.8%</li><li>Mythic — 0.2%</li></ul><p>Creatures do not represent money, securities, or a promise of resale value. There is no cash-out.</p></body></html>"""
 
 @app.get("/terms", response_class=HTMLResponse)
 async def terms_page():
     support = SUPPORT_HANDLE or "the support contact shown in the bot"
-    return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Terms — MVP</h1><p>DROP1 sells digital collectibles inside Telegram using Telegram Stars. Each purchase guarantees one digital collectible. The collectible received is randomly selected according to the published Season odds.</p><p>DROP1 collectibles have no guaranteed monetary value, no cash-out, and no promise of appreciation.</p><p>A beta card-for-card trade board may allow owners to voluntarily exchange collectibles. DROP1 does not set or guarantee a market value. Paid user-to-user resale is not enabled in this MVP.</p><p>Daily DROP availability is limited by the currently unlocked global pool and may sell out before the daily reset.</p><p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p></body></html>"""
+    return f"""<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Terms — MVP</h1><p>DROP1 sells digital creature hatches inside Telegram using Telegram Stars. Each purchase guarantees one digital creature. The creature received is randomly selected according to the published Primal Hatch odds.</p><p>DROP1 creatures have no guaranteed monetary value, no cash-out, and no promise of appreciation.</p><p>A beta creature-for-creature trade board may allow owners to voluntarily exchange creatures. DROP1 does not set or guarantee a market value. Paid user-to-user resale is not enabled in this MVP.</p><p>Daily DROP availability is limited by the currently unlocked global pool and may sell out before the daily reset.</p><p>Payments are fulfilled only after Telegram confirms a successful payment. For purchase support, contact {support}.</p></body></html>"""
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
