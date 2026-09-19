@@ -34,8 +34,8 @@ The current build is a **closed-beta vertical slice**, not a public paid release
 - Public advertising/acquisition.
 
 ## Release gates still required before public paid launch
-1. Connect persistent Postgres to the web service and migrate the DB layer.
-2. Move the Render web service from sleeping Free compute to always-on compute.
+1. Sync the prepared Render Blueprint once so `DATABASE_URL` points the existing `drop1-game` service at the existing `drop1-db`. The dual SQLite/Postgres adapter and both smoke suites already pass.
+2. Before public traffic, move the Render web service from sleeping Free compute to always-on compute and move the free Postgres database to a non-expiring paid plan.
 3. Complete release-quality visual coverage for all active hatchable species.
 4. Test Stars purchase, cancellation, duplicate Telegram updates and refund/reconciliation paths using a live paid QA purchase.
 5. Add operator/support identity and a real human support route.
