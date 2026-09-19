@@ -35,7 +35,7 @@ const css=`
 .p6Creature .p6Poster{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;display:block;opacity:1;transition:opacity .22s ease}
 .p6Scan{position:absolute;z-index:8;left:7%;right:7%;top:16%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),#fff,var(--accent),transparent);box-shadow:0 0 18px var(--accent),0 0 38px var(--accent);opacity:0}
 .p6EggWrap{position:absolute;z-index:11;left:50%;top:47%;width:220px;height:270px;transform:translate(-50%,-50%) scale(.9);display:grid;place-items:center;will-change:transform,filter,opacity}
-.p6EggImg{width:100%;height:100%;object-fit:contain;display:block;opacity:0;transition:opacity .18s ease;filter:drop-shadow(0 22px 26px #000c) drop-shadow(0 0 20px color-mix(in srgb,var(--accent) 38%,transparent)) drop-shadow(0 0 52px color-mix(in srgb,var(--accent2) 30%,transparent));user-select:none;-webkit-user-drag:none}.p6EggImg.ready{opacity:1}.p6EggCssFallback{position:absolute;width:168px;height:214px;border-radius:50% 50% 47% 53%/58% 58% 42% 42%;background:radial-gradient(circle at 36% 23%,#eaffff 0,#91efff 10%,#5f76d8 36%,#2b214e 70%,#090d18 100%);border:2px solid #77eaff;box-shadow:0 0 22px #5ee5ff88,0 0 58px #704dff55,inset -18px -24px 32px #0b102b88;opacity:.94}
+.p6EggVisual{position:absolute;inset:0;background:url("${EGG}") center/contain no-repeat;filter:drop-shadow(0 22px 26px #000c) drop-shadow(0 0 20px color-mix(in srgb,var(--accent) 38%,transparent)) drop-shadow(0 0 52px color-mix(in srgb,var(--accent2) 30%,transparent));transform:translateZ(0);-webkit-transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden}.p6EggCssFallback{position:absolute;width:168px;height:214px;border-radius:50% 50% 47% 53%/58% 58% 42% 42%;background:radial-gradient(circle at 36% 23%,#eaffff 0,#91efff 10%,#5f76d8 36%,#2b214e 70%,#090d18 100%);border:2px solid #77eaff;box-shadow:0 0 22px #5ee5ff88,0 0 58px #704dff55,inset -18px -24px 32px #0b102b88;opacity:.42;z-index:-1}
 .p6EggAura{position:absolute;inset:12%;border-radius:50%;z-index:-1;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 18%,transparent),transparent 68%);filter:blur(16px);opacity:.65}
 .p6Cracks{position:absolute;inset:0;pointer-events:none;opacity:0;filter:drop-shadow(0 0 7px var(--accent)) drop-shadow(0 0 18px var(--accent))}
 .p6Cracks:before,.p6Cracks:after{content:"";position:absolute;background:#f4ffff;transform-origin:top center;clip-path:polygon(42% 0,100% 0,54% 19%,92% 21%,26% 48%,72% 50%,0 100%,27% 62%,2% 63%,55% 32%,14% 31%)}
@@ -46,6 +46,29 @@ const css=`
 .p6Name{font-size:34px;font-weight:950;line-height:1;margin-top:10px;letter-spacing:-.035em;text-shadow:0 10px 32px #000}.p6Serial{font-size:11px;color:#9eb0c7;margin-top:8px;letter-spacing:.07em}
 .p6Status{position:absolute;z-index:13;left:0;right:0;bottom:13%;text-align:center;font-size:9px;font-weight:950;letter-spacing:.28em;color:#dffbff;text-shadow:0 0 12px var(--accent);opacity:.75}
 .p6Dust{position:absolute;inset:0;z-index:11;pointer-events:none}.p6Dust i{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);opacity:0}
+
+/* Essential hatch motion uses CSS keyframes for Telegram iOS WebView reliability. */
+@keyframes p6TopIn{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes p6ChamberIn{from{transform:translate(-50%,-50%) scale(.96)}to{transform:translate(-50%,-50%) scale(1)}}
+@keyframes p6EggArrive{0%{transform:translate(-50%,-50%) scale(.82);opacity:.15;filter:brightness(.55)}65%{transform:translate(-50%,-50%) scale(.94);opacity:1;filter:brightness(1.08)}100%{transform:translate(-50%,-50%) scale(.9);opacity:1;filter:brightness(1)}}
+@keyframes p6ScanSweep{0%{opacity:0;transform:translateY(0)}12%{opacity:.9}82%{opacity:.8;transform:translateY(330px)}100%{opacity:0;transform:translateY(360px)}}
+@keyframes p6EggShake{0%,100%{transform:translate(-50%,-50%) scale(.92) rotate(0)}16%{transform:translate(-50%,-50%) scale(.93) rotate(-2deg)}34%{transform:translate(-50%,-50%) scale(.94) rotate(3deg)}54%{transform:translate(-50%,-50%) scale(.94) rotate(-3.4deg)}74%{transform:translate(-50%,-50%) scale(.95) rotate(2deg)}}
+@keyframes p6CrackOn{0%{opacity:0;filter:brightness(.8)}35%{opacity:1;filter:brightness(2)}100%{opacity:1;filter:brightness(1.15)}}
+@keyframes p6FlashBurst{0%{opacity:0;transform:translate(-50%,-50%) scale(.1)}24%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(7.5)}}
+@keyframes p6EggVanish{0%{opacity:1;transform:translate(-50%,-50%) scale(.95);filter:brightness(1)}48%{opacity:.95;transform:translate(-50%,-50%) scale(1.05);filter:brightness(1.8)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.24);filter:brightness(2.5) blur(8px)}}
+@keyframes p6CreatureWake{0%{opacity:.08;filter:brightness(.2) saturate(.45) blur(5px);transform:scale(.9)}62%{opacity:.88;filter:brightness(1.2) saturate(1.22) blur(0);transform:scale(1.045)}100%{opacity:1;filter:brightness(1) saturate(1.06) blur(0);transform:scale(1)}}
+@keyframes p6MetaIn{0%{opacity:0;transform:translateY(18px)}70%{opacity:1;transform:translateY(-4px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes p6BtnsIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.p6Scene.p6Run .p6Top{animation:p6TopIn .42s ease-out forwards;-webkit-animation:p6TopIn .42s ease-out forwards}
+.p6Scene.p6Run .p6Chamber{animation:p6ChamberIn .65s ease-out forwards;-webkit-animation:p6ChamberIn .65s ease-out forwards}
+.p6Scene.p6Run .p6EggWrap{animation:p6EggArrive .7s cubic-bezier(.2,.75,.2,1) forwards;-webkit-animation:p6EggArrive .7s cubic-bezier(.2,.75,.2,1) forwards}
+.p6Scene.p6Run .p6Scan{animation:p6ScanSweep .93s ease-in-out forwards;-webkit-animation:p6ScanSweep .93s ease-in-out forwards}
+.p6Scene.p6Fracture .p6EggWrap{animation:p6EggShake .72s ease-in-out forwards;-webkit-animation:p6EggShake .72s ease-in-out forwards}
+.p6Scene.p6Fracture .p6Cracks{animation:p6CrackOn .36s ease-out forwards;-webkit-animation:p6CrackOn .36s ease-out forwards}
+.p6Scene.p6Awaken .p6Flash{animation:p6FlashBurst .76s ease-out forwards;-webkit-animation:p6FlashBurst .76s ease-out forwards}
+.p6Scene.p6Awaken .p6EggWrap{animation:p6EggVanish .66s cubic-bezier(.15,.75,.18,1) forwards;-webkit-animation:p6EggVanish .66s cubic-bezier(.15,.75,.18,1) forwards}
+.p6Scene.p6Awaken .p6Creature{animation:p6CreatureWake 1.08s cubic-bezier(.12,.9,.18,1.05) forwards;-webkit-animation:p6CreatureWake 1.08s cubic-bezier(.12,.9,.18,1.05) forwards}
+.p6Scene.p6Confirmed .p6Meta{animation:p6MetaIn .62s cubic-bezier(.2,.8,.2,1) forwards;-webkit-animation:p6MetaIn .62s cubic-bezier(.2,.8,.2,1) forwards}
 `;
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 const preload=new Image();preload.src=EGG;
@@ -69,28 +92,30 @@ function showRevealV6(item){
  const creatureMarkup=model
    ? `<div class="p6Creature"><img class="p6Poster" src="${url}" alt=""><model-viewer src="${model}" poster="${url}" alt="${item.name||'Creature'} 3D" auto-rotate auto-rotate-delay="0" rotation-per-second="14deg" interaction-prompt="none" shadow-intensity="1.25" shadow-softness=".8" exposure="1.08" environment-image="neutral" camera-orbit="20deg 75deg auto" camera-controls="false" loading="eager" reveal="auto"></model-viewer></div>`
    : `<div class="p6Creature">${url?`<img src="${url}" alt="${item.name||'Creature'}">`:'<div style="font-size:130px;display:grid;place-items:center;height:100%">🦖</div>'}</div>`;
- scene.innerHTML=`<div class="p6Grid"></div><div class="p6Top"><div class="p6Kicker">DROP1 // PRIMAL HATCH</div><div class="p6Signal">LIFE SIGNAL</div></div><div class="p6Chamber">${creatureMarkup}<div class="p6Scan"></div><div class="p6Flash"></div><div class="p6EggWrap"><div class="p6EggAura"></div><div class="p6EggCssFallback"></div><img class="p6EggImg" src="${EGG}" alt="Primal egg"><div class="p6Cracks"></div></div></div><div class="p6Dust"></div><div class="p6Status">INCUBATION LOCKED</div><div class="p6Meta"><div class="p6Rarity">◆ ${String(item.rarity||'common').toUpperCase()}</div><div class="p6Name">${item.name||'Creature'}</div><div class="p6Serial">#${String(item.serial_no||0).padStart(6,'0')} · PWR ${item.power||0} · LCK ${item.luck||0}</div></div>`;
+ scene.innerHTML=`<div class="p6Grid"></div><div class="p6Top"><div class="p6Kicker">DROP1 // PRIMAL HATCH</div><div class="p6Signal">LIFE SIGNAL</div></div><div class="p6Chamber">${creatureMarkup}<div class="p6Scan"></div><div class="p6Flash"></div><div class="p6EggWrap"><div class="p6EggAura"></div><div class="p6EggCssFallback"></div><div class="p6EggVisual" role="img" aria-label="Primal egg"></div><div class="p6Cracks"></div></div></div><div class="p6Dust"></div><div class="p6Status">INCUBATION LOCKED</div><div class="p6Meta"><div class="p6Rarity">◆ ${String(item.rarity||'common').toUpperCase()}</div><div class="p6Name">${item.name||'Creature'}</div><div class="p6Serial">#${String(item.serial_no||0).padStart(6,'0')} · PWR ${item.power||0} · LCK ${item.luck||0}</div></div>`;
  r.insertBefore(scene,r.firstChild);
  const mv=scene.querySelector('model-viewer'),poster=scene.querySelector('.p6Poster');
  if(mv){
    mv.addEventListener('load',()=>{if(poster)poster.style.opacity='0'},{once:true});
    mv.addEventListener('error',()=>{mv.remove();if(poster)poster.style.opacity='1'},{once:true});
  }
- const eggImg=scene.querySelector('.p6EggImg'),eggFallback=scene.querySelector('.p6EggCssFallback');
- if(eggImg){
-   const show=()=>{eggImg.classList.add('ready');if(eggFallback)eggFallback.style.opacity='0'};
-   if(eggImg.complete&&eggImg.naturalWidth>0)show(); else eggImg.addEventListener('load',show,{once:true});
-   eggImg.addEventListener('error',()=>{eggImg.remove();if(eggFallback)eggFallback.style.opacity='1'},{once:true});
- }
  const top=scene.querySelector('.p6Top'),ch=scene.querySelector('.p6Chamber'),creature=scene.querySelector('.p6Creature'),scan=scene.querySelector('.p6Scan'),egg=scene.querySelector('.p6EggWrap'),cracks=scene.querySelector('.p6Cracks'),flash=scene.querySelector('.p6Flash'),status=scene.querySelector('.p6Status'),meta=scene.querySelector('.p6Meta'),dust=scene.querySelector('.p6Dust');
  hatchSound();haptics();addDust(dust);
- top.animate([{opacity:0,transform:'translateY(-7px)'},{opacity:1,transform:'translateY(0)'}],{duration:420,fill:'forwards'});
- ch.animate([{transform:'translate(-50%,-50%) scale(.96)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:650,easing:'ease-out',fill:'forwards'});
- egg.animate([{transform:'translate(-50%,-50%) scale(.84)',opacity:.2,filter:'brightness(.55)'},{transform:'translate(-50%,-50%) scale(.92)',opacity:1,filter:'brightness(1)'},{transform:'translate(-50%,-50%) scale(.9)',opacity:1,filter:'brightness(1)'}],{duration:700,easing:'cubic-bezier(.2,.75,.2,1)',fill:'forwards'});
- scan.animate([{opacity:0,transform:'translateY(0)'},{opacity:.9,transform:'translateY(0)'},{opacity:.8,transform:'translateY(330px)'},{opacity:0,transform:'translateY(360px)'}],{duration:930,easing:'ease-in-out',fill:'forwards'});
- setTimeout(()=>{status.textContent='SHELL FRACTURE';cracks.animate([{opacity:0},{opacity:1}],{duration:240,fill:'forwards'});cracks.querySelectorAll(':scope:before,:scope:after');egg.animate([{transform:'translate(-50%,-50%) scale(.9) rotate(0)'},{transform:'translate(-50%,-50%) scale(.91) rotate(-1.6deg)'},{transform:'translate(-50%,-50%) scale(.92) rotate(2.4deg)'},{transform:'translate(-50%,-50%) scale(.92) rotate(-2.8deg)'},{transform:'translate(-50%,-50%) scale(.93) rotate(1.4deg)'},{transform:'translate(-50%,-50%) scale(.93) rotate(0)'}],{duration:720,easing:'ease-in-out',fill:'forwards'});scene.querySelector('.p6Cracks').animate([{filter:'brightness(1)'},{filter:'brightness(1.8)'},{filter:'brightness(1.1)'}],{duration:680,fill:'forwards'})},690);
- setTimeout(()=>{status.textContent='SPECIMEN AWAKENING';flash.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.1)'},{opacity:1,transform:'translate(-50%,-50%) scale(1)'},{opacity:0,transform:'translate(-50%,-50%) scale(7.5)'}],{duration:760,easing:'ease-out',fill:'forwards'});egg.animate([{opacity:1,transform:'translate(-50%,-50%) scale(.93)',filter:'brightness(1)'},{opacity:.85,transform:'translate(-50%,-50%) scale(1.02)',filter:'brightness(1.8)'},{opacity:0,transform:'translate(-50%,-50%) scale(1.22)',filter:'brightness(2.5) blur(8px)'}],{duration:660,easing:'cubic-bezier(.15,.75,.18,1)',fill:'forwards'});creature.animate([{opacity:.08,filter:'brightness(.2) saturate(.45) blur(5px)',transform:'scale(.9)'},{opacity:.82,filter:'brightness(1.18) saturate(1.2) blur(0)',transform:'scale(1.04)'},{opacity:1,filter:'brightness(1) saturate(1.06) blur(0)',transform:'scale(1)'}],{duration:1080,easing:'cubic-bezier(.12,.9,.18,1.05)',fill:'forwards'})},1320);
- setTimeout(()=>{status.textContent='SPECIMEN CONFIRMED';status.animate([{opacity:.78},{opacity:0}],{duration:480,fill:'forwards'});meta.animate([{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'translateY(-4px)'},{opacity:1,transform:'translateY(0)'}],{duration:620,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});if(box)box.animate([{opacity:0,transform:'translateY(24px)'},{opacity:1,transform:'translateY(0)'}],{duration:520,easing:'ease-out',fill:'forwards'})},2280);
+ // Core choreography is CSS-driven because Telegram iOS can skip Web Animations API paints.
+ requestAnimationFrame(()=>requestAnimationFrame(()=>scene.classList.add('p6Run')));
+ setTimeout(()=>{status.textContent='SHELL FRACTURE';scene.classList.add('p6Fracture')},690);
+ setTimeout(()=>{status.textContent='SPECIMEN AWAKENING';scene.classList.add('p6Awaken')},1320);
+ setTimeout(()=>{
+   status.textContent='SPECIMEN CONFIRMED';
+   scene.classList.add('p6Confirmed');
+   status.style.opacity='0';
+   if(box){
+     box.style.opacity='1';
+     box.style.transform='translateY(0)';
+     box.style.animation='p6BtnsIn .52s ease-out forwards';
+     box.style.webkitAnimation='p6BtnsIn .52s ease-out forwards';
+   }
+ },2280);
  setTimeout(()=>{r.dataset.hatching='0'},3050)
 }
 document.addEventListener('pointerdown',unlockAudio,{capture:true,passive:true});document.addEventListener('touchstart',unlockAudio,{capture:true,passive:true});window.showReveal=showRevealV6;
