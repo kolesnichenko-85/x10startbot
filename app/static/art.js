@@ -61,7 +61,7 @@ function renameUI(){
 }
 
 function runHatchFx(revealEl){
- if(window.showReveal&&window.showReveal.name==='showRevealV5')return;
+ if(window.DROP1_PREMIUM_HATCH)return;
  if(!revealEl||revealEl.style.display!=='flex'||revealEl.dataset.hatching==='1')return;
  revealEl.dataset.hatching='1';
  const rt=(document.getElementById('revealRarity')?.textContent||'common').toLowerCase();
