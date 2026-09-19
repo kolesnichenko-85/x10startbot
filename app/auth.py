@@ -6,9 +6,15 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 DEV_TELEGRAM_ID = int(os.getenv("DEV_TELEGRAM_ID", "777000001"))
 
 def validate_init_data(init_data: str, max_age_seconds: int = 3600):
-    if DEV_MODE and (not init_data or init_data == "dev"):
+    if DEV_MODE and (not init_data or init_data == "dev" or init_data.startswith("dev:")):
+        tid = DEV_TELEGRAM_ID
+        if init_data.startswith("dev:"):
+            try:
+                tid = int(init_data.split(":", 1)[1])
+            except Exception:
+                raise ValueError("bad dev user id")
         return {
-            "user": {"id": DEV_TELEGRAM_ID, "first_name": "Dev", "username": "dev_user"},
+            "user": {"id": tid, "first_name": f"Dev{tid}", "username": f"dev_{tid}"},
             "start_param": None
         }
 
