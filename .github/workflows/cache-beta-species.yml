@@ -1,0 +1,45 @@
+name: Cache Primal Hatch beta species art
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  cache:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Download and crop beta species
+        run: |
+          python -m pip install --quiet pillow
+          mkdir -p app/static/assets/species
+          curl -fL 'https://d2jqrm6oza8nb6.cloudfront.net/datasets/89db95a2-b263-44f8-81e4-0f8483415de7.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiMDM2YjFmYmMxZjFiOThkZiIsInN0YWdlIjoicHJvZCIsImJ1Y2tldCI6InJ1bndheS1kYXRhc2V0cyIsImV4cCI6MTc4OTkzMTMyNH0.kCzwFhLJ-H8uatVMbjN67tPtm-mLlk-gkDwQMT6Feo8' -o /tmp/species-grid.png
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          im=Image.open("/tmp/species-grid.png").convert("RGB")
+          w,h=im.size
+          boxes={
+            "pebbleback.webp":(0,0,w//2,h//2),
+            "void-trike.webp":(w//2,0,w,h//2),
+            "aurum-rex.webp":(0,h//2,w//2,h),
+            "origin-beast.webp":(w//2,h//2,w,h),
+          }
+          out=Path("app/static/assets/species")
+          for name,box in boxes.items():
+              crop=im.crop(box)
+              crop.thumbnail((850,850),Image.Resampling.LANCZOS)
+              crop.save(out/name,"WEBP",quality=84,method=6)
+          PY
+      - name: Commit beta species assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/static/assets/species/*.webp
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add polished beta species artwork"
+          git push
