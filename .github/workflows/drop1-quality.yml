@@ -18,3 +18,12 @@ jobs:
         run: python scripts/quality_gate.py
       - name: Frontend syntax and UX invariants
         run: python scripts/frontend_gate.py
+      - name: API smoke test
+        env:
+          DEV_MODE: "true"
+          FREE_TEST_MODE: "true"
+          DATABASE_PATH: "/tmp/drop1_ci.db"
+          BOT_TOKEN: "ci-not-a-real-token"
+        run: |
+          python -m pip install -r requirements.txt
+          python scripts/smoke_test.py
