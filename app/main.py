@@ -15,6 +15,7 @@ from .db import (
 )
 from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 from .market_api import router as market_router, init_market
+from .storage import database_backend
 
 DROP_PRICE_STARS = int(os.getenv("DROP_PRICE_STARS", "50"))
 FREE_TEST_MODE = os.getenv("FREE_TEST_MODE", "false").lower() == "true"
@@ -116,8 +117,8 @@ async def health():
         "paid_resale": False,
         "version": APP_VERSION,
         "stage": "closed_beta",
-        "storage": "sqlite",
-        "persistent_storage": not os.getenv("DATABASE_PATH", "/tmp/drop1.db").startswith("/tmp/"),
+        "storage": database_backend(),
+        "persistent_storage": database_backend() == "postgres" or not os.getenv("DATABASE_PATH", "/tmp/drop1.db").startswith("/tmp/"),
         "flagship_3d": True,
     }
 
