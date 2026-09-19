@@ -58,3 +58,14 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+CREATURE_BATCH_01_IDS = ("c002","c003","c004","c005","c006","r003","r004","e001","e002","l001")
+
+def check_creature_batch_01():
+    art = (ROOT / "app/static/art.js").read_text()
+    catalog = (ROOT / "app/catalog.py").read_text()
+    for cid in CREATURE_BATCH_01_IDS:
+        assert f"'{cid}':" in art, f"Missing polished art mapping for {cid}"
+        assert f'"id":"{cid}"' in catalog, f"Missing catalog entry for {cid}"
+
+check_creature_batch_01()
