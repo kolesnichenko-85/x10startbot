@@ -47,7 +47,7 @@ checks={
     "duplicate_grouping":"creatureQty" in index and "SPECIES" in index,
     "market_pair":"YOU OFFER" in market and "YOU GET" in market and "PROPOSE TRADE" in market,
     "real_3d":"neon-raptor.glb" in art and "model-viewer" in art,
-    "egg_fallback":"p6EggCssFallback" in hatch and "primal-egg.png" in hatch,
+    "egg_fallback":"drawEggFallback" in hatch and "primal-egg.png" in hatch,
     "ios_hatch_renderer":"hatchCanvas22" in hatch and "setTimeout(frame,33)" in hatch and "getContext(\"2d\"" in hatch,
 }
 bad=[k for k,v in checks.items() if not v]
