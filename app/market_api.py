@@ -270,13 +270,13 @@ async def create_listing(request: Request, x_telegram_init_data: str | None = He
             c.execute("BEGIN IMMEDIATE")
             item = c.execute("SELECT * FROM owned_items WHERE id=?", (item_id,)).fetchone()
             if not item or item["telegram_id"] != tid:
-                raise HTTPException(status_code=404, detail="You do not own this card")
+                raise HTTPException(status_code=404, detail="You do not own this creature")
             existing_offer = c.execute(
                 "SELECT 1 FROM market_offers WHERE offered_item_id=? AND status='pending'",
                 (item_id,),
             ).fetchone()
             if existing_offer:
-                raise HTTPException(status_code=409, detail="This card is already locked in an offer")
+                raise HTTPException(status_code=409, detail="This creature is already locked in an offer")
             c.execute(
                 """INSERT INTO market_listings(
                        id,item_id,seller_id,mode,ask_stars,want_character_id,want_rarity,note,fee_bps,status,created_at
@@ -284,7 +284,7 @@ async def create_listing(request: Request, x_telegram_init_data: str | None = He
                 (listing_id, item_id, tid, "trade", None, want_character_id, want_rarity, note, None, "active", now),
             )
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="This card is already listed")
+        raise HTTPException(status_code=409, detail="This creature is already listed")
 
     return {"ok": True, "listing_id": listing_id}
 
@@ -333,7 +333,7 @@ async def create_offer(listing_id: str, request: Request, x_telegram_init_data: 
                 (offered_item_id,),
             ).fetchone()
             if listed_elsewhere:
-                raise HTTPException(status_code=409, detail="Offered card is already listed")
+                raise HTTPException(status_code=409, detail="Offered creature is already listed")
             c.execute(
                 """INSERT INTO market_offers(
                        id,listing_id,offerer_id,offered_item_id,topup_stars,note,status,created_at
@@ -341,7 +341,7 @@ async def create_offer(listing_id: str, request: Request, x_telegram_init_data: 
                 (offer_id, listing_id, tid, offered_item_id, 0, note, "pending", now),
             )
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="This card is already locked in another offer")
+        raise HTTPException(status_code=409, detail="This creature is already locked in another offer")
 
     return {"ok": True, "offer_id": offer_id}
 
@@ -398,9 +398,9 @@ async def accept_offer(offer_id: str, x_telegram_init_data: str | None = Header(
         seller_item = c.execute("SELECT * FROM owned_items WHERE id=?", (listing["item_id"],)).fetchone()
         buyer_item = c.execute("SELECT * FROM owned_items WHERE id=?", (offer["offered_item_id"],)).fetchone()
         if not seller_item or seller_item["telegram_id"] != seller_id:
-            raise HTTPException(status_code=409, detail="Seller no longer owns the listed card")
+            raise HTTPException(status_code=409, detail="Seller no longer owns the listed creature")
         if not buyer_item or buyer_item["telegram_id"] != offer["offerer_id"]:
-            raise HTTPException(status_code=409, detail="Offerer no longer owns the offered card")
+            raise HTTPException(status_code=409, detail="Offerer no longer owns the offered creature")
 
         # Atomic ownership swap. Serial numbers and mint identity never change.
         c.execute("UPDATE owned_items SET telegram_id=? WHERE id=?", (offer["offerer_id"], seller_item["id"]))
