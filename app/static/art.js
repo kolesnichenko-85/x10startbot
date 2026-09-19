@@ -52,7 +52,7 @@ window.DROP1_PHYSICAL={};
       <div class="specStats"><div class="specStat"><b id="specPower">0</b><span>POWER</span></div><div class="specStat"><b id="specLuck">0</b><span>LUCK</span></div><div class="specStat"><b id="specCount">1</b><span>SPECIMENS</span></div></div>
       <div class="specSection"><div class="specSectionTitle">YOUR COPIES · CHOOSE EXACT SERIAL</div><div class="specimens" id="specimens"></div></div>
       <div class="specSection"><div class="specSectionTitle">PROVENANCE</div><div class="specProvenance" id="specProvenance">Loading ownership record…</div></div>
-      <div class="specActions"><button id="specShare">SHARE</button><button class="primary" id="specTrade">TRADE THIS SPECIMEN</button><button class="disabled wide" id="specPhysical" disabled>PHYSICAL FIGURE · PRODUCTION PIPELINE</button></div>
+      <div class="specActions"><button id="specShare">SHARE</button><button class="primary" id="specTrade">TRADE THIS SPECIMEN</button><button class="wide" id="specPhysical">PHYSICAL FIGURE · I WANT ONE</button></div>
     </div>`;
   document.body.appendChild(modal);
 
@@ -127,6 +127,13 @@ window.DROP1_PHYSICAL={};
       window.toast('Creature listed for trade');
       setTimeout(()=>location.href='/static/market.html',550);
     }catch(e){window.toast(e.message||'Could not list creature')}
+  };
+  q('specPhysical').onclick=()=>{
+    if(!current)return;
+    window.track?.('physical_interest',{item_id:current.item_id,character_id:current.id,source:'specimen'});
+    try{window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('success')}catch(e){}
+    window.toast?.('Interest saved · physical figure is not on sale yet');
+    q('specPhysical').textContent='INTEREST SAVED ✓';
   };
   q('specShare').onclick=()=>{
     if(!current)return;
