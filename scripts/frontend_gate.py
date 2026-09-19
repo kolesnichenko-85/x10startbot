@@ -4,7 +4,7 @@ import re, subprocess, tempfile, sys
 ROOT=Path(__file__).resolve().parents[1]
 files=[
     ROOT/"app/static/art.js",
-    ROOT/"app/static/hatch_engine_v21.js",
+    ROOT/"app/static/hatch_canvas_v22.js",
 ]
 htmls=[
     ROOT/"app/static/index.html",
@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory() as td:
 # Release-level UX invariants.
 index=(ROOT/"app/static/index.html").read_text(encoding="utf-8")
 market=(ROOT/"app/static/market.html").read_text(encoding="utf-8")
-hatch=(ROOT/"app/static/hatch_engine_v21.js").read_text(encoding="utf-8")
+hatch=(ROOT/"app/static/hatch_canvas_v22.js").read_text(encoding="utf-8")
 art=(ROOT/"app/static/art.js").read_text(encoding="utf-8")
 checks={
     "onboarding":"ENTER PRIMAL HATCH" in index,
@@ -48,7 +48,7 @@ checks={
     "market_pair":"YOU OFFER" in market and "YOU GET" in market and "PROPOSE TRADE" in market,
     "real_3d":"neon-raptor.glb" in art and "model-viewer" in art,
     "egg_fallback":"p6EggCssFallback" in hatch and "primal-egg.png" in hatch,
-    "ios_hatch_renderer":"runIOSHatch" in hatch and "requestAnimationFrame" in hatch and "USE_FRAME_RENDERER=true" in hatch,
+    "ios_hatch_renderer":"hatchCanvas22" in hatch and "setTimeout(frame,33)" in hatch and "getContext(\"2d\"" in hatch,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
