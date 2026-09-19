@@ -7,6 +7,7 @@ window.DROP1_SPIN={
 window.DROP1_PHYSICAL={};
 
 (function(){
+  function init(){
   const openBtn=document.getElementById('openBtn');
   if(!openBtn) return;
 
@@ -113,4 +114,6 @@ window.DROP1_PHYSICAL={};
     if(item) return open(item);
     if(original) return original(id);
   };
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
