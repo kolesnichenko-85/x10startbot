@@ -50,7 +50,7 @@ def main():
     assert "HATCH TEST EGG" in index or "HATCH EGG" in index
     assert "PROPOSE TRADE" in market
     assert "/static/models/neon-raptor.glb" in art
-    assert "/static/assets/primal-egg.webp" in hatch
+    assert "/static/assets/primal-egg.png" in hatch
     print("DROP1 quality gate passed: catalog, odds, assets, hatch, 3D and market invariants OK.")
 
 if __name__ == "__main__":
