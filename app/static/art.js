@@ -1,17 +1,17 @@
 window.DROP1_ART={
   'c001':'/static/assets/species/pebbleback.webp',
-  'c002':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3-pro-image/images/af15f36f-a442-489d-b28c-48762bdc5baa/145ff952-869e-4b86-97c4-f731646bce08/Premium_digital_collectible_creature_for_DROP1_Primal_Hatch_.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiODhhMmYzNTAwOWFjNjU0YyIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTg3ODA5Nn0.cAoQvgbM8Fj6ro786YXDarzEeD9rnxun1kcf8dAxTh0',
-  'c003':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/a30351cb-4b94-471a-b696-eb1f32fdf5b1/435bc629-edac-49d8-90db-d526283c90a1/Premium_digital_collectible_creature_for_DROP1__Ember_Hatchl.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiNTQ5YzU3YTcxOThmNjE5ZSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTkyODk5OX0._K8rEqUr-xz32d81BVSGohyMVz6C5e2zfLMQY9jdbGU',
-  'c004':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/588e1a4c-5b3d-4352-87b8-774fce56bcbf/d9578011-96fa-402d-8af9-8b27988d8f05/Premium_digital_collectible_creature_for_DROP1__Pocket_Rapto.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZjZhMTE5ZTZmMzBkZTVlZiIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTkxOTQ2Mn0.2oviQ8kWk83MEP7ItT2cLZPsUetwm53YRlTIUDGRdVk',
-  'c005':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/a6a37a90-8afe-4540-8fd6-9d5dafc26cd7/7621e9fd-8d74-4fca-9569-e637e70ede51/Premium_digital_collectible_creature_for_DROP1__Tidejaw__A_s.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiNGExNDNhYmFmOWUwYjE1MSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTkyNDUzOH0.WvlUp8Xk-GkNwQAaHSl25recQFQbUZdCIVOi4fi5e3A',
-  'c006':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/dae9159e-5021-4a5f-97a0-80b38a504a08/d78d9c29-ba06-4bfd-9c60-3fb6f765f9f2/Premium_digital_collectible_creature_for_DROP1__Suncrest__A_.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiYmUxNGRmMGY5MDg4OGU2MiIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTk2MzY2M30.COB96GFr-FlHzaVe2D9uevlyPP_vdVKroX5QbGLSqYY',
+  'c002':'/static/assets/species/moss-trike.jpg',
+  'c003':'/static/assets/species/ember-hatchling.jpg',
+  'c004':'/static/assets/species/pocket-raptor.jpg',
+  'c005':'/static/assets/species/tidejaw.jpg',
+  'c006':'/static/assets/species/suncrest.jpg',
   'r001':'/static/assets/species/crystal-ankyl.png',
   'r002':'/static/assets/neon-raptor.webp',
-  'r003':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/ff03e449-91b6-4bc6-bfef-b605eab046b6/f03bbf63-3c4e-4c2b-b94b-e262c2096ef0/Premium_digital_collectible_creature_for_DROP1__Volt_Stego__.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiNTVhM2Y1N2I3OGNjYTFkYSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTkyNTM3MX0.z-P5FAzSw_mnHZuIKQGLLzPVaQ5gqaHB0ywN0Nd1vkw',
-  'r004':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/12db500f-5336-457e-a1b8-9ccdee023611/af922dd3-2f91-4b47-a36b-6c80aa67b5ca/Premium_digital_collectible_creature_for_DROP1__Obsidian_Spi.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiYjA3NzE1ZDUxNWI4YTllMSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTk2MDc4OX0.qPMhDvkGX2dIIm3d9Zqt6nrbsmSEHY4QhQjD8up_XGY',
-  'e001':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3-pro-image/images/c453c9bb-cf51-4dbb-88ac-9aa0807b79e0/23b3ca19-8f46-46a9-a50e-6368f4e5a2cc/Premium_digital_collectible_creature_for_DROP1_Primal_Hatch_.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZDYzYWU2MjJlNjEyM2RhZCIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTg5MzAyNn0.6-VJa9BqrDZoz8g6cpTJtJc6FQWgGvjD625gG6rJjF4',
-  'e002':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/3fb0c741-e092-49f5-b6cc-c7322b3d2ca6/da89f7c5-b655-43ec-821d-e0decb17cd54/Premium_digital_collectible_creature_for_DROP1__Aurora_Quetz.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiYTc5Yjg4YTBiMzhhY2U2NiIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTk2MjUyOH0.xQgoUt4Fb61YsYlETOZhSoVBUJaQOPf3ct6WNwXc93Y',
-  'l001':'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3-pro-image/images/c2f5093d-f153-4308-8360-57d42fb777e6/e5f0fea5-d71a-46cc-bfdd-388cb14c9243/Premium_digital_collectible_creature_for_DROP1_Primal_Hatch_.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiMjhkMDMzODNmYmFhY2U3MCIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTk2MjExNX0.HGvhOYw_9Gh1FkphQscMOBdvyK5fm--5kLT7zAyxrR4'
+  'r003':'/static/assets/species/volt-stego.jpg',
+  'r004':'/static/assets/species/obsidian-spino.jpg',
+  'e001':'/static/assets/species/void-rex.jpg',
+  'e002':'/static/assets/species/aurora-quetzal.jpg',
+  'l001':'/static/assets/species/aurum-rex.jpg'
 };
 window.DROP1_SPIN={
   'r002':['/static/assets/neon-raptor.webp']
