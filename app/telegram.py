@@ -15,11 +15,11 @@ async def tg(method: str, payload: dict):
 
 async def create_drop_invoice(purchase_id: str, stars: int):
     return await tg("createInvoiceLink", {
-        "title": "DROP1 Mystery Capsule",
-        "description": "One guaranteed digital collectible from DROP1 Season 0.",
+        "title": "DROP1 Primal Hatch Egg",
+        "description": "One guaranteed digital creature from DROP1 Primal Hatch.",
         "payload": f"drop:{purchase_id}",
         "currency": "XTR",
-        "prices": [{"label": "Mystery DROP", "amount": stars}]
+        "prices": [{"label": "Primal Hatch Egg", "amount": stars}]
     })
 
 async def answer_precheckout(query_id: str, ok=True, error_message=None):
@@ -68,5 +68,5 @@ async def setup_bot(base_url: str, webhook_secret: str):
             {"command":"support","description":"Support"}
         ]
     })
-    print(f"Telegram webhook configured: {webhook_url}", flush=True)
+    print("Telegram webhook configured", flush=True)
     return True
