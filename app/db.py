@@ -58,6 +58,24 @@ CREATE TABLE IF NOT EXISTS rewards (
     created_at TEXT NOT NULL,
     UNIQUE(telegram_id, reward_key)
 );
+
+CREATE TABLE IF NOT EXISTS product_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id INTEGER NOT NULL,
+    event_name TEXT NOT NULL,
+    item_id INTEGER,
+    character_id TEXT,
+    source TEXT,
+    metadata TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_events_user_time
+ON product_events(telegram_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_product_events_name_time
+ON product_events(event_name, created_at DESC);
 """
 
 @contextmanager
@@ -298,4 +316,26 @@ def leaderboard(limit=50):
                       (SELECT COUNT(*) FROM owned_items oi WHERE oi.telegram_id=users.telegram_id) AS drops
                FROM users ORDER BY xp DESC, drops DESC, created_at ASC LIMIT ?""",
             (limit,)
+        ).fetchall()
+
+
+def track_event(telegram_id: int, event_name: str, item_id: int|None=None, character_id: str|None=None, source: str|None=None, metadata: str|None=None):
+    name = (event_name or "").strip().lower()[:64]
+    if not name:
+        return
+    with conn() as c:
+        c.execute(
+            """INSERT INTO product_events(telegram_id,event_name,item_id,character_id,source,metadata,created_at)
+               VALUES (?,?,?,?,?,?,?)""",
+            (telegram_id, name, item_id, character_id, (source or "")[:64] or None, (metadata or "")[:500] or None, utcnow())
+        )
+
+def product_event_counts(hours: int = 24):
+    since = (utcnow_dt() - timedelta(hours=max(1, min(hours, 720)))).isoformat()
+    with conn() as c:
+        return c.execute(
+            """SELECT event_name, COUNT(*) AS n
+               FROM product_events WHERE created_at>=?
+               GROUP BY event_name ORDER BY n DESC, event_name ASC""",
+            (since,)
         ).fetchall()
