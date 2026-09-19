@@ -112,14 +112,23 @@ def init_market():
     with conn() as c:
         c.executescript(POSTGRES_MARKET_SCHEMA if is_postgres() else SQLITE_MARKET_SCHEMA)
         # Backfill mint provenance for legacy items. The operation is idempotent.
-        c.execute(
-            """INSERT INTO ownership_events(
-                   item_id, from_user_id, to_user_id, event_type, reference_id, event_key, created_at
-               )
-               SELECT id, NULL, telegram_id, 'mint', purchase_id, 'mint:' || id, acquired_at
-               FROM owned_items
-               ON CONFLICT(event_key) DO NOTHING"""
-        )
+        if is_postgres():
+            c.execute(
+                """INSERT INTO ownership_events(
+                       item_id, from_user_id, to_user_id, event_type, reference_id, event_key, created_at
+                   )
+                   SELECT id, NULL, telegram_id, 'mint', purchase_id, 'mint:' || id::text, acquired_at
+                   FROM owned_items
+                   ON CONFLICT(event_key) DO NOTHING"""
+            )
+        else:
+            c.execute(
+                """INSERT OR IGNORE INTO ownership_events(
+                       item_id, from_user_id, to_user_id, event_type, reference_id, event_key, created_at
+                   )
+                   SELECT id, NULL, telegram_id, 'mint', purchase_id, 'mint:' || id, acquired_at
+                   FROM owned_items"""
+            )
 
 
 def auth_user(init_data: str | None):
