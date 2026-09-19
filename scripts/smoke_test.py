@@ -1,4 +1,5 @@
-import os, tempfile, pathlib
+import os, tempfile, pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 tmp = pathlib.Path(tempfile.gettempdir()) / "drop1_ci.db"
 try:
