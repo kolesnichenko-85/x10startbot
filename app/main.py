@@ -109,7 +109,7 @@ async def terms_page():
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
-    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Privacy — MVP</h1><p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection, purchases, referrals, XP, trade offers and support.</p><p>Payment identifiers are stored to reconcile purchases and handle refunds or disputes. Ownership-transfer history is stored to preserve collectible provenance.</p></body></html>"""
+    return """<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,Arial;max-width:680px;margin:40px auto;padding:0 18px;line-height:1.55"><h1>DROP1 Privacy — MVP</h1><p>The service stores the Telegram account identifier and basic Telegram profile data needed to operate the collection, purchases, referrals, XP, trade offers and support.</p><p>Payment identifiers are stored to reconcile purchases and handle refunds or disputes. Ownership-transfer history is stored to preserve creature provenance.</p></body></html>"""
 
 @app.get("/api/bootstrap")
 async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
@@ -244,11 +244,11 @@ async def telegram_webhook(secret: str, request: Request):
 
     if chat_id and text.startswith("/start"):
         markup = {"inline_keyboard": [[{"text": "Open DROP1", "web_app": {"url": base}}]]} if base else None
-        await send_message(chat_id, "DROP1 is a digital collectible game. Every paid DROP contains one guaranteed collectible.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.", markup)
+        await send_message(chat_id, "DROP1 is a digital creature-collection game. Every paid egg hatches one guaranteed creature.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.", markup)
         return {"ok": True}
     if chat_id and text.startswith("/collection"):
         markup = {"inline_keyboard": [[{"text": "Open my collection", "web_app": {"url": base}}]]} if base else None
-        await send_message(chat_id, "Your DROP1 collection is inside the Mini App.", markup)
+        await send_message(chat_id, "Your DROP1 creatures are inside the Mini App.", markup)
         return {"ok": True}
     if chat_id and text.startswith("/leaderboard"):
         rows = leaderboard(10)
@@ -290,7 +290,7 @@ async def telegram_webhook(secret: str, request: Request):
                     markup = {"inline_keyboard": [[{"text": "Open collection", "web_app": {"url": base}}]]} if base else None
                     await send_message(
                         p["telegram_id"],
-                        f"🎉 {rarity} DROP!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour creature is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),
+                        f"🥚 {rarity} HATCH!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour creature is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),
                         markup,
                     )
         return {"ok": True}
