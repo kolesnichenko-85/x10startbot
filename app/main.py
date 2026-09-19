@@ -285,7 +285,7 @@ async def telegram_webhook(secret: str, request: Request):
     text = (msg.get("text") or "").strip()
     chat_id = (msg.get("chat") or {}).get("id")
     base = os.getenv("BASE_URL", "").rstrip("/")
-    launch_url = f"{base}/?build=ios21" if base else ""
+    launch_url = f"{base}/?build=ios22" if base else ""
 
     if chat_id and text.startswith("/start"):
         markup = {"inline_keyboard": [[{"text": "Open DROP1", "web_app": {"url": launch_url}}]]} if launch_url else None
