@@ -1,8 +1,8 @@
 window.DROP1_ART={
-'r002':'https://d2jqrm6oza8nb6.cloudfront.net/datasets/3e2405ce-63e3-455b-8bd0-dc8cd71e177f.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZmZkMzAyNmZkMGI2OWI5YyIsImJ1Y2tldCI6InJ1bndheS1kYXRhc2V0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTg3NDc5OX0.sKlQY7Y9pnEceycHpv5fko_6rZXLRsO9txl8mprncPw'
+'r002':'/static/assets/neon-raptor.png'
 };
 window.DROP1_SPIN={
-'r002':['https://d2jqrm6oza8nb6.cloudfront.net/datasets/3e2405ce-63e3-455b-8bd0-dc8cd71e177f.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZmZkMzAyNmZkMGI2OWI5YyIsImJ1Y2tldCI6InJ1bndheS1kYXRhc2V0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTg3NDc5OX0.sKlQY7Y9pnEceycHpv5fko_6rZXLRsO9txl8mprncPw']
+'r002':['/static/assets/neon-raptor.png']
 };
 window.DROP1_PHYSICAL={};
 
@@ -61,6 +61,7 @@ function renameUI(){
 }
 
 function runHatchFx(revealEl){
+ if(window.showReveal&&window.showReveal.name==='showRevealV5')return;
  if(!revealEl||revealEl.style.display!=='flex'||revealEl.dataset.hatching==='1')return;
  revealEl.dataset.hatching='1';
  const rt=(document.getElementById('revealRarity')?.textContent||'common').toLowerCase();
