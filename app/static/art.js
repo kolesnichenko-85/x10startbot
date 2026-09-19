@@ -21,9 +21,9 @@ window.DROP1_PHYSICAL={};
   .specStage{position:relative;margin:12px 0 12px;min-height:390px;border:1px solid #315477;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#173b66,#07101a 68%);box-shadow:0 30px 80px #000c,inset 0 0 60px #64cfff0a;touch-action:pan-y}
   .specStage:before{content:'';position:absolute;left:-20%;right:-20%;bottom:-13%;height:38%;opacity:.18;transform:perspective(520px) rotateX(64deg);background-image:linear-gradient(#5ae5ff22 1px,transparent 1px),linear-gradient(90deg,#5ae5ff22 1px,transparent 1px);background-size:34px 34px}
   .specArt{position:absolute;inset:0;display:grid;place-items:center;transition:transform .18s ease-out;will-change:transform}.specArt img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;filter:drop-shadow(0 28px 38px #000d)}
-  .specModel{width:100%;height:100%;display:block;background:transparent;--poster-color:transparent;touch-action:pan-y}
+  .specModel{position:absolute;inset:0;z-index:2;width:100%;height:100%;display:block;background:transparent;--poster-color:transparent;touch-action:pan-y}
   .specModel::part(default-progress-bar){height:2px;background:#5be5ff}
-  .specModelFallback{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.35;pointer-events:none}
+  .specModelFallback{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:contain;opacity:1;pointer-events:none;transition:opacity .25s ease}
   .specFallback{width:78%;height:72%;display:grid;place-items:center;border:1px solid #304967;border-radius:28px;background:radial-gradient(circle,#22486f,#07101a 68%);font-size:120px;filter:drop-shadow(0 22px 30px #000d)}
   .specRarity{position:absolute;z-index:3;left:14px;top:14px;border:1px solid #55ddff;background:#06101de8;border-radius:999px;padding:7px 10px;font-size:9px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 20px #47d8ff33}.specRarity.epic{color:#eb8bff;border-color:#a653d8}.specRarity.legendary{color:#ffe072;border-color:#a97825}.specRarity.mythic{color:#a8ffff;border-color:#bc5cdc}
   .specInspect{position:absolute;z-index:3;left:50%;bottom:12px;transform:translateX(-50%);border:1px solid #2a415d;background:#06101de8;border-radius:999px;padding:7px 10px;color:#9fb0c5;font-size:9px;white-space:nowrap}
@@ -67,14 +67,22 @@ window.DROP1_PHYSICAL={};
     art.style.transform='none';
     if(model){
       art.dataset.mode='3d';
-      art.innerHTML='<model-viewer class="specModel" src="'+model+'" poster="'+url+'" alt="'+item.name+' 3D specimen" camera-controls auto-rotate auto-rotate-delay="1800" rotation-per-second="12deg" interaction-prompt="none" shadow-intensity="1.15" shadow-softness="0.8" exposure="1.05" environment-image="neutral" loading="eager" reveal="auto"></model-viewer>';
+      art.innerHTML=(url?'<img class="specModelFallback" src="'+url+'" alt="">':'')+'<model-viewer class="specModel" src="'+model+'" poster="'+url+'" alt="'+item.name+' 3D specimen" camera-controls auto-rotate auto-rotate-delay="1800" rotation-per-second="12deg" interaction-prompt="none" shadow-intensity="1.15" shadow-softness="0.8" exposure="1.05" environment-image="neutral" loading="eager" reveal="auto"></model-viewer>';
       inspect.textContent='DRAG TO ROTATE · PINCH TO ZOOM · 3D SPECIMEN';
-      const mv=art.querySelector('model-viewer');
+      const mv=art.querySelector('model-viewer'),fallback=art.querySelector('.specModelFallback');
+      mv?.addEventListener('load',()=>{if(fallback)fallback.style.opacity='0'},{once:true});
       mv?.addEventListener('error',()=>{
         art.dataset.mode='2d';
         art.innerHTML=url?'<img src="'+url+'" alt="'+item.name+'">':'<div class="specFallback">'+(item.emoji||'🦖')+'</div>';
         inspect.textContent='INTERACTIVE PREVIEW · 3D LOAD FAILED';
       },{once:true});
+      setTimeout(()=>{
+        if(!customElements.get('model-viewer')&&art.dataset.mode==='3d'){
+          art.dataset.mode='2d';
+          art.innerHTML=url?'<img src="'+url+'" alt="'+item.name+'">':'<div class="specFallback">'+(item.emoji||'🦖')+'</div>';
+          inspect.textContent='INTERACTIVE PREVIEW · 3D ENGINE UNAVAILABLE';
+        }
+      },4500);
       return;
     }
     art.dataset.mode='2d';
