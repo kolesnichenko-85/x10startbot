@@ -34,6 +34,16 @@ app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(market_router)
 
+@app.middleware("http")
+async def beta_no_cache(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith(".html") or path.endswith(".js"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 @app.on_event("startup")
 async def startup():
     init_db()
@@ -84,7 +94,7 @@ def choose_character():
 
 @app.get("/")
 async def home():
-    return FileResponse("app/static/index.html")
+    return FileResponse("app/static/index.html", headers={"Cache-Control":"no-store, no-cache, must-revalidate, max-age=0","Pragma":"no-cache","Expires":"0"})
 
 @app.get("/health")
 async def health():
