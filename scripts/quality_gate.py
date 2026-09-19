@@ -24,6 +24,8 @@ def main():
         ROOT / "app/static/assets/neon-raptor.webp",
         ROOT / "app/static/assets/primal-egg.webp",
         ROOT / "app/static/models/neon-raptor.glb",
+        ROOT / "app/static/models/crystal-ankyl.glb",
+        ROOT / "app/static/assets/species/crystal-ankyl.png",
         ROOT / "app/static/index.html",
         ROOT / "app/static/market.html",
         ROOT / "app/static/art.js",
@@ -50,6 +52,7 @@ def main():
     assert "HATCH TEST EGG" in index or "HATCH EGG" in index
     assert "PROPOSE TRADE" in market
     assert "/static/models/neon-raptor.glb" in art
+    assert "/static/models/crystal-ankyl.glb" in art
     assert "/static/assets/primal-egg.png" in hatch
     print("DROP1 quality gate passed: catalog, odds, assets, hatch, 3D and market invariants OK.")
 
