@@ -16,3 +16,5 @@ jobs:
         run: python -m compileall -q app
       - name: Product invariants
         run: python scripts/quality_gate.py
+      - name: Frontend syntax and UX invariants
+        run: python scripts/frontend_gate.py
