@@ -82,7 +82,7 @@ function haptics(){try{const h=window.Telegram?.WebApp?.HapticFeedback;h?.impact
 function rarity(i){return String(i?.rarity||'common').toLowerCase()}
 function artUrl(i){return window.DROP1_ART?.[i?.id||i?.character_id]||''}
 function modelUrl(i){return window.DROP1_MODEL?.[i?.id||i?.character_id]||''}
-function addDust(root){for(let i=0;i<26;i++){const p=document.createElement('i');p.style.left=(38+Math.random()*24)+'%';p.style.top=(39+Math.random()*18)+'%';root.appendChild(p);setTimeout(()=>p.animate([{opacity:0,transform:'translate(0,0) scale(.2)'},{opacity:.9,transform:`translate(${(Math.random()-.5)*130}px,${-30-Math.random()*100}px) scale(1)`},{opacity:0,transform:`translate(${(Math.random()-.5)*220}px,${-100-Math.random()*170}px) scale(.2)`}],{duration:1000+Math.random()*700,easing:'ease-out',fill:'forwards'}),1120+Math.random()*220)}}
+function addDust(root){if(IS_IOS)return;for(let i=0;i<26;i++){const p=document.createElement('i');p.style.left=(38+Math.random()*24)+'%';p.style.top=(39+Math.random()*18)+'%';root.appendChild(p);setTimeout(()=>{try{p.animate?.([{opacity:0,transform:'translate(0,0) scale(.2)'},{opacity:.9,transform:`translate(${(Math.random()-.5)*130}px,${-30-Math.random()*100}px) scale(1)`},{opacity:0,transform:`translate(${(Math.random()-.5)*220}px,${-100-Math.random()*170}px) scale(.2)`}],{duration:1000+Math.random()*700,easing:'ease-out',fill:'forwards'})}catch(e){}},1120+Math.random()*220)}}
 
 function clamp01(v){return Math.max(0,Math.min(1,v))}
 function easeOutCubic(t){t=clamp01(t);return 1-Math.pow(1-t,3)}
