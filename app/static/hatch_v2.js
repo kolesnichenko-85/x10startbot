@@ -2,6 +2,7 @@
 window.DROP1_PREMIUM_HATCH=true;
 const EGG="/static/assets/primal-egg.png";
 const EGG_FALLBACK="/static/assets/primal-egg.png";
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);
 const css=`
 .capsuleScene .capsule{
  width:188px!important;height:224px!important;border:0!important;border-radius:0!important;
@@ -82,6 +83,99 @@ function rarity(i){return String(i?.rarity||'common').toLowerCase()}
 function artUrl(i){return window.DROP1_ART?.[i?.id||i?.character_id]||''}
 function modelUrl(i){return window.DROP1_MODEL?.[i?.id||i?.character_id]||''}
 function addDust(root){for(let i=0;i<26;i++){const p=document.createElement('i');p.style.left=(38+Math.random()*24)+'%';p.style.top=(39+Math.random()*18)+'%';root.appendChild(p);setTimeout(()=>p.animate([{opacity:0,transform:'translate(0,0) scale(.2)'},{opacity:.9,transform:`translate(${(Math.random()-.5)*130}px,${-30-Math.random()*100}px) scale(1)`},{opacity:0,transform:`translate(${(Math.random()-.5)*220}px,${-100-Math.random()*170}px) scale(.2)`}],{duration:1000+Math.random()*700,easing:'ease-out',fill:'forwards'}),1120+Math.random()*220)}}
+
+function clamp01(v){return Math.max(0,Math.min(1,v))}
+function easeOutCubic(t){t=clamp01(t);return 1-Math.pow(1-t,3)}
+function easeInOut(t){t=clamp01(t);return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function iosShake(t){
+  // deterministic damped shake: visible on iPhone but settles before reveal
+  const amp=(1-clamp01(t))*5.2;
+  return Math.sin(t*42)*amp + Math.sin(t*71)*amp*.38;
+}
+function runIOSHatch(scene,refs,box,r){
+  const {top,ch,creature,scan,egg,cracks,flash,status,meta}=refs;
+  const started=performance.now();
+  const duration=3150;
+  // Reset every property we drive so a cached prior reveal cannot leak state.
+  top.style.opacity='0'; ch.style.transform='translate(-50%,-50%) scale(.96)';
+  egg.style.opacity='1'; egg.style.transform='translate(-50%,-50%) scale(.82)';
+  egg.style.filter='brightness(.72)';
+  cracks.style.opacity='0'; scan.style.opacity='0'; flash.style.opacity='0';
+  creature.style.opacity='.08'; creature.style.transform='scale(.9)';
+  creature.style.filter='brightness(.25) saturate(.55)';
+  meta.style.opacity='0';
+  if(box){box.style.opacity='0';box.style.transform='translateY(24px)';box.style.animation='none';box.style.webkitAnimation='none'}
+
+  function frame(now){
+    const ms=now-started;
+
+    // intro 0-680ms
+    const intro=easeOutCubic(ms/680);
+    top.style.opacity=String(intro);
+    ch.style.transform='translate(-50%,-50%) scale('+(0.96+0.04*intro).toFixed(4)+')';
+    const eggScale=.82+.10*intro;
+    egg.style.transform='translate(-50%,-50%) scale('+eggScale.toFixed(4)+')';
+    egg.style.filter='brightness('+(0.72+.28*intro).toFixed(3)+')';
+
+    // scanner 110-950ms
+    const sp=clamp01((ms-110)/840);
+    if(sp>0&&sp<1){
+      scan.style.opacity=String(Math.sin(Math.PI*sp)*.9);
+      scan.style.transform='translateY('+(350*sp).toFixed(1)+'px)';
+    }else if(sp>=1){scan.style.opacity='0'}
+
+    // fracture 690-1420ms
+    const fp=clamp01((ms-690)/730);
+    if(fp>0){
+      status.textContent='SHELL FRACTURE';
+      cracks.style.opacity=String(Math.min(1,fp*3));
+      cracks.style.filter='brightness('+(1+Math.sin(fp*Math.PI)*1.15).toFixed(2)+') drop-shadow(0 0 12px var(--accent))';
+      const rot=iosShake(fp);
+      const sc=.92+.035*Math.sin(Math.PI*fp);
+      egg.style.transform='translate(-50%,-50%) scale('+sc.toFixed(4)+') rotate('+rot.toFixed(2)+'deg)';
+    }
+
+    // awakening 1320-2150ms
+    const ap=clamp01((ms-1320)/830);
+    if(ap>0){
+      status.textContent='SPECIMEN AWAKENING';
+      const burst=Math.sin(Math.PI*clamp01(ap*1.35));
+      flash.style.opacity=String(Math.max(0,burst));
+      flash.style.transform='translate(-50%,-50%) scale('+(0.2+7.0*easeOutCubic(ap)).toFixed(3)+')';
+      egg.style.opacity=String(1-easeOutCubic(ap));
+      egg.style.transform='translate(-50%,-50%) scale('+(0.95+.30*easeOutCubic(ap)).toFixed(3)+')';
+      egg.style.filter='brightness('+(1+1.7*ap).toFixed(2)+')';
+      const cp=easeOutCubic(clamp01((ms-1450)/760));
+      creature.style.opacity=String(.08+.92*cp);
+      creature.style.transform='scale('+(0.90+.10*cp+.035*Math.sin(cp*Math.PI)).toFixed(3)+')';
+      creature.style.filter='brightness('+(0.25+.78*cp).toFixed(2)+') saturate('+(0.55+.5*cp).toFixed(2)+')';
+    }
+
+    // confirm 2250+
+    const mp=easeOutCubic((ms-2250)/520);
+    if(mp>0){
+      status.textContent='SPECIMEN CONFIRMED';
+      status.style.opacity=String(1-mp);
+      meta.style.opacity=String(mp);
+      meta.style.transform='translateY('+(18*(1-mp)).toFixed(1)+'px)';
+      if(box){box.style.opacity=String(mp);box.style.transform='translateY('+(24*(1-mp)).toFixed(1)+'px)'}
+    }
+
+    if(ms<duration && r.dataset.hatching==='1') requestAnimationFrame(frame);
+    else {
+      r.dataset.hatching='0';
+      egg.style.opacity='0';
+      creature.style.opacity='1';
+      creature.style.transform='scale(1)';
+      creature.style.filter='brightness(1) saturate(1.05)';
+      meta.style.opacity='1';
+      meta.style.transform='translateY(0)';
+      if(box){box.style.opacity='1';box.style.transform='translateY(0)'}
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
 function showRevealV6(item){
  if(!item)return;const r=document.getElementById('reveal');if(!r)return;
  r.querySelector('.p6Scene')?.remove();r.querySelector('.phScene')?.remove();
@@ -89,7 +183,7 @@ function showRevealV6(item){
  const rr=document.getElementById('revealRarity'),ra=document.getElementById('revealArt'),rn=document.getElementById('revealName'),rs=document.getElementById('revealSerial'),box=r.querySelector('.revealBox');
  if(rr)rr.textContent='';if(ra)ra.innerHTML='';if(rn)rn.textContent='';if(rs)rs.textContent='';if(box){box.style.opacity='0';box.style.transform='translateY(24px)'}
  const url=artUrl(item),model=modelUrl(item),scene=document.createElement('div');scene.className='p6Scene';
- const creatureMarkup=model
+ const creatureMarkup=(model&&!IS_IOS)
    ? `<div class="p6Creature"><img class="p6Poster" src="${url}" alt=""><model-viewer src="${model}" poster="${url}" alt="${item.name||'Creature'} 3D" auto-rotate auto-rotate-delay="0" rotation-per-second="14deg" interaction-prompt="none" shadow-intensity="1.25" shadow-softness=".8" exposure="1.08" environment-image="neutral" camera-orbit="20deg 75deg auto" camera-controls="false" loading="eager" reveal="auto"></model-viewer></div>`
    : `<div class="p6Creature">${url?`<img src="${url}" alt="${item.name||'Creature'}">`:'<div style="font-size:130px;display:grid;place-items:center;height:100%">🦖</div>'}</div>`;
  scene.innerHTML=`<div class="p6Grid"></div><div class="p6Top"><div class="p6Kicker">DROP1 // PRIMAL HATCH</div><div class="p6Signal">LIFE SIGNAL</div></div><div class="p6Chamber">${creatureMarkup}<div class="p6Scan"></div><div class="p6Flash"></div><div class="p6EggWrap"><div class="p6EggAura"></div><div class="p6EggCssFallback"></div><div class="p6EggVisual" role="img" aria-label="Primal egg"></div><div class="p6Cracks"></div></div></div><div class="p6Dust"></div><div class="p6Status">INCUBATION LOCKED</div><div class="p6Meta"><div class="p6Rarity">◆ ${String(item.rarity||'common').toUpperCase()}</div><div class="p6Name">${item.name||'Creature'}</div><div class="p6Serial">#${String(item.serial_no||0).padStart(6,'0')} · PWR ${item.power||0} · LCK ${item.luck||0}</div></div>`;
@@ -101,22 +195,25 @@ function showRevealV6(item){
  }
  const top=scene.querySelector('.p6Top'),ch=scene.querySelector('.p6Chamber'),creature=scene.querySelector('.p6Creature'),scan=scene.querySelector('.p6Scan'),egg=scene.querySelector('.p6EggWrap'),cracks=scene.querySelector('.p6Cracks'),flash=scene.querySelector('.p6Flash'),status=scene.querySelector('.p6Status'),meta=scene.querySelector('.p6Meta'),dust=scene.querySelector('.p6Dust');
  hatchSound();haptics();addDust(dust);
- // Core choreography is CSS-driven because Telegram iOS can skip Web Animations API paints.
- requestAnimationFrame(()=>requestAnimationFrame(()=>scene.classList.add('p6Run')));
- setTimeout(()=>{status.textContent='SHELL FRACTURE';scene.classList.add('p6Fracture')},690);
- setTimeout(()=>{status.textContent='SPECIMEN AWAKENING';scene.classList.add('p6Awaken')},1320);
- setTimeout(()=>{
-   status.textContent='SPECIMEN CONFIRMED';
-   scene.classList.add('p6Confirmed');
-   status.style.opacity='0';
-   if(box){
-     box.style.opacity='1';
-     box.style.transform='translateY(0)';
-     box.style.animation='p6BtnsIn .52s ease-out forwards';
-     box.style.webkitAnimation='p6BtnsIn .52s ease-out forwards';
-   }
- },2280);
- setTimeout(()=>{r.dataset.hatching='0'},3050)
+ if(IS_IOS){
+   runIOSHatch(scene,{top,ch,creature,scan,egg,cracks,flash,status,meta},box,r);
+ }else{
+   requestAnimationFrame(()=>requestAnimationFrame(()=>scene.classList.add('p6Run')));
+   setTimeout(()=>{status.textContent='SHELL FRACTURE';scene.classList.add('p6Fracture')},690);
+   setTimeout(()=>{status.textContent='SPECIMEN AWAKENING';scene.classList.add('p6Awaken')},1320);
+   setTimeout(()=>{
+     status.textContent='SPECIMEN CONFIRMED';
+     scene.classList.add('p6Confirmed');
+     status.style.opacity='0';
+     if(box){
+       box.style.opacity='1';
+       box.style.transform='translateY(0)';
+       box.style.animation='p6BtnsIn .52s ease-out forwards';
+       box.style.webkitAnimation='p6BtnsIn .52s ease-out forwards';
+     }
+   },2280);
+   setTimeout(()=>{r.dataset.hatching='0'},3050);
+ }
 }
 document.addEventListener('pointerdown',unlockAudio,{capture:true,passive:true});document.addEventListener('touchstart',unlockAudio,{capture:true,passive:true});window.showReveal=showRevealV6;
 })();
