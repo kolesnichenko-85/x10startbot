@@ -1,0 +1,25 @@
+name: Cache Moss Trike test
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  cache:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: |
+          mkdir -p app/static/assets/species
+          curl --fail --location --retry 2 --user-agent 'Mozilla/5.0' --header 'Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' --header 'Referer: https://app.runwayml.com/' 'https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/086ec0f8-c129-4c68-8a5e-c208a7edae15/9dedeca8-df63-4953-a16b-5199704449f3/DROP1_Primal_Hatch_creature_concept__Moss_Trike__compact_juv.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZjZjM2E3NTAzN2VjNmNlMSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTkzNzQ4OH0.6VVYDiXtWTlNF_3-LJIJj-OgjGbC5FQDFFID1BWzP3I' -o app/static/assets/species/moss-trike.jpg
+          file app/static/assets/species/moss-trike.jpg
+          test -s app/static/assets/species/moss-trike.jpg
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/static/assets/species/moss-trike.jpg
+          git commit -m "Cache Moss Trike art"
+          git push
