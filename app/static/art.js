@@ -1,4 +1,5 @@
 window.DROP1_ART={
+  'c001':'/static/assets/species/pebbleback.webp',
   'r002':'/static/assets/neon-raptor.webp'
 };
 window.DROP1_SPIN={
