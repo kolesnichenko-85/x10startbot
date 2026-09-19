@@ -1,6 +1,6 @@
 (function(){
 window.DROP1_PREMIUM_HATCH=true;
-const EGG="https://d2jqrm6oza8nb6.cloudfront.net/datasets/1f963698-dc8a-4f44-8365-432502232ed8.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiNDhkN2VlMmEyOGU4MDc1MCIsImJ1Y2tldCI6InJ1bndheS1kYXRhc2V0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4OTkzMTU2Mn0.ecg02CLQ_E4p6IR8HDTfCZoswR-IZ6VbBONH-l4vnU4";
+const EGG="/static/assets/primal-egg.webp";
 const css=`
 .capsuleScene .capsule{
  width:188px!important;height:224px!important;border:0!important;border-radius:0!important;
