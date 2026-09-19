@@ -28,7 +28,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.9.0-beta"
+APP_VERSION = "0.9.1-ios-canvas-22"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -95,6 +95,15 @@ def choose_character():
 @app.get("/")
 async def home():
     return FileResponse("app/static/index.html", headers={"Cache-Control":"no-store, no-cache, must-revalidate, max-age=0","Pragma":"no-cache","Expires":"0"})
+
+@app.get("/ios-canvas-22")
+async def ios_canvas_22():
+    return FileResponse("app/static/index.html", headers={
+        "Cache-Control":"no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma":"no-cache",
+        "Expires":"0",
+        "X-DROP1-Build":"ios-canvas-22",
+    })
 
 @app.get("/health")
 async def health():
@@ -285,7 +294,7 @@ async def telegram_webhook(secret: str, request: Request):
     text = (msg.get("text") or "").strip()
     chat_id = (msg.get("chat") or {}).get("id")
     base = os.getenv("BASE_URL", "").rstrip("/")
-    launch_url = f"{base}/?build=ios22" if base else ""
+    launch_url = f"{base}/ios-canvas-22" if base else ""
 
     if chat_id and text.startswith("/start"):
         markup = {"inline_keyboard": [[{"text": "Open DROP1", "web_app": {"url": launch_url}}]]} if launch_url else None
