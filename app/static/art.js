@@ -115,14 +115,14 @@ window.DROP1_PHYSICAL={};
   function open(item){
     group=(window.state?.collection||[]).filter(x=>x.id===item.id).sort((a,b)=>a.serial_no-b.serial_no);
     if(!group.length) group=[item];
-    modal.classList.add('open');choose(item);
+    modal.classList.add('open');choose(item);window.track?.('specimen_open',{item_id:item.item_id,character_id:item.id,source:'collection'});
     try{window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light')}catch(e){}
   }
   q('specClose').onclick=()=>modal.classList.remove('open');
   q('specTrade').onclick=async()=>{
     if(!current)return;
     try{
-      await window.api('/api/market/listings',{method:'POST',body:JSON.stringify({item_id:current.item_id,mode:'trade',want_rarity:'',note:''})});
+      await window.api('/api/market/listings',{method:'POST',body:JSON.stringify({item_id:current.item_id,mode:'trade',want_rarity:'',note:''})});window.track?.('listing_create',{item_id:current.item_id,character_id:current.id,source:'specimen'});
       window.toast('Creature listed for trade');
       setTimeout(()=>location.href='/static/market.html',550);
     }catch(e){window.toast(e.message||'Could not list creature')}
@@ -130,7 +130,7 @@ window.DROP1_PHYSICAL={};
   q('specShare').onclick=()=>{
     if(!current)return;
     const url=window.state?.share_url||'';
-    const t='I hatched '+current.name+' #'+String(current.serial_no||0).padStart(6,'0')+' in DROP1.';
+    window.track?.('share_click',{item_id:current.item_id,character_id:current.id,source:'specimen'});const t='I hatched '+current.name+' #'+String(current.serial_no||0).padStart(6,'0')+' in DROP1.';
     if(window.Telegram?.WebApp?.openTelegramLink&&url) window.Telegram.WebApp.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(t));
     else window.toast('Share link unavailable');
   };
