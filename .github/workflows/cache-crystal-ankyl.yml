@@ -1,0 +1,27 @@
+name: Cache Crystal Ankyl 3D
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  cache:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Crystal Ankyl assets
+        run: |
+          mkdir -p app/static/models app/static/assets/species
+          curl -fL 'https://storage.to3d.app/generated-3d/models/2026-09-19/task_dad6ed85-350b-41d3-83ef-934e90951738_model.glb' -o app/static/models/crystal-ankyl.glb
+          curl -fL 'https://storage.to3d.app/generated-3d/images/2026-09-19/task_dad6ed85-350b-41d3-83ef-934e90951738_image.png' -o app/static/assets/species/crystal-ankyl.png
+          test -s app/static/models/crystal-ankyl.glb
+          test -s app/static/assets/species/crystal-ankyl.png
+      - name: Commit Crystal Ankyl assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/static/models/crystal-ankyl.glb app/static/assets/species/crystal-ankyl.png
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add Crystal Ankyl 3D specimen"
+          git push
