@@ -285,13 +285,14 @@ async def telegram_webhook(secret: str, request: Request):
     text = (msg.get("text") or "").strip()
     chat_id = (msg.get("chat") or {}).get("id")
     base = os.getenv("BASE_URL", "").rstrip("/")
+    launch_url = f"{base}/?build=ios21" if base else ""
 
     if chat_id and text.startswith("/start"):
-        markup = {"inline_keyboard": [[{"text": "Open DROP1", "web_app": {"url": base}}]]} if base else None
+        markup = {"inline_keyboard": [[{"text": "Open DROP1", "web_app": {"url": launch_url}}]]} if launch_url else None
         await send_message(chat_id, "DROP1 is a digital creature-collection game. Every paid egg hatches one guaranteed creature.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.", markup)
         return {"ok": True}
     if chat_id and text.startswith("/collection"):
-        markup = {"inline_keyboard": [[{"text": "Open my collection", "web_app": {"url": base}}]]} if base else None
+        markup = {"inline_keyboard": [[{"text": "Open my collection", "web_app": {"url": launch_url}}]]} if launch_url else None
         await send_message(chat_id, "Your DROP1 creatures are inside the Mini App.", markup)
         return {"ok": True}
     if chat_id and text.startswith("/leaderboard"):
@@ -331,7 +332,7 @@ async def telegram_webhook(secret: str, request: Request):
                 if minted:
                     rarity = character["rarity"].upper()
                     share_url = f"https://t.me/{BOT_USERNAME}?startapp=ref_{p['telegram_id']}" if BOT_USERNAME else ""
-                    markup = {"inline_keyboard": [[{"text": "Open collection", "web_app": {"url": base}}]]} if base else None
+                    markup = {"inline_keyboard": [[{"text": "Open collection", "web_app": {"url": launch_url}}]]} if launch_url else None
                     await send_message(
                         p["telegram_id"],
                         f"🥚 {rarity} HATCH!\n{character['emoji']} {character['name']} #{item['serial_no']:06d}\nPower {character['power']} · Luck {character['luck']}\n\nYour creature is now in your DROP1 collection." + (f"\nInvite link: {share_url}" if share_url else ""),
