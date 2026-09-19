@@ -28,7 +28,9 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.5.0"\n\napp = FastAPI(title="DROP1")
+APP_VERSION = "0.5.0"
+
+app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(market_router)
 
