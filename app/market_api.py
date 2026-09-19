@@ -402,17 +402,20 @@ async def accept_offer(offer_id: str, x_telegram_init_data: str | None = Header(
     now = utcnow()
     with conn() as c:
         c.execute("BEGIN IMMEDIATE")
-        offer = c.execute("SELECT * FROM market_offers WHERE id=?", (offer_id,)).fetchone()
+        offer_sql = "SELECT * FROM market_offers WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
+        offer = c.execute(offer_sql, (offer_id,)).fetchone()
         if not offer or offer["status"] != "pending":
             raise HTTPException(status_code=404, detail="Offer is not active")
-        listing = c.execute("SELECT * FROM market_listings WHERE id=?", (offer["listing_id"],)).fetchone()
+        listing_sql = "SELECT * FROM market_listings WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
+        listing = c.execute(listing_sql, (offer["listing_id"],)).fetchone()
         if not listing or listing["status"] != "active" or listing["seller_id"] != seller_id:
             raise HTTPException(status_code=404, detail="Listing is not active")
         if listing["mode"] != "trade" or not offer["offered_item_id"]:
             raise HTTPException(status_code=409, detail="Unsupported offer type")
 
-        seller_item = c.execute("SELECT * FROM owned_items WHERE id=?", (listing["item_id"],)).fetchone()
-        buyer_item = c.execute("SELECT * FROM owned_items WHERE id=?", (offer["offered_item_id"],)).fetchone()
+        item_sql = "SELECT * FROM owned_items WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
+        seller_item = c.execute(item_sql, (listing["item_id"],)).fetchone()
+        buyer_item = c.execute(item_sql, (offer["offered_item_id"],)).fetchone()
         if not seller_item or seller_item["telegram_id"] != seller_id:
             raise HTTPException(status_code=409, detail="Seller no longer owns the listed creature")
         if not buyer_item or buyer_item["telegram_id"] != offer["offerer_id"]:
