@@ -17,7 +17,7 @@ os.environ["BASE_URL"]=""
 
 from fastapi.testclient import TestClient
 from app.main import app
-from app.db import reserve_purchase
+from app.db import reserve_purchase, mark_paid_and_mint, get_purchase
 from app.auth import validate_init_data
 
 H1={"X-Telegram-Init-Data":"dev:777000001"}
@@ -122,9 +122,18 @@ with TestClient(app) as client:
     reserve_purchase("ci_res_2",777000001,50,200,10,3,300,ttl_minutes=10)
     assert client.post("/api/purchases/ci_res_2/cancel",headers=H1,json={}).status_code==200
 
+    # Telegram-confirmed payment must still be fulfilled if our temporary reservation
+    # was cancelled/expired at the edge of checkout.
+    reserve_purchase("ci_late_pay",777000001,50,200,10,3,300,ttl_minutes=10)
+    assert client.post("/api/purchases/ci_late_pay/cancel",headers=H1,json={}).status_code==200
+    late_item, late_minted = mark_paid_and_mint("ci_late_pay","ci_charge_late","c010")
+    assert late_minted is True and late_item["character_id"]=="c010"
+    assert get_purchase("ci_late_pay")["status"]=="paid"
+
     # Collector 1 hatches and lists a specimen.
     before=client.get("/api/bootstrap",headers=H1)
     assert before.status_code==200 and before.json()["test_mode"] is True
+    assert set(before.json()["user"].keys())=={"xp","dust"}
     share_url=before.json()["share_url"]
     assert "ref_" in share_url and "777000001" not in share_url
     leaders=client.get("/api/leaderboard").json()["leaders"]
@@ -213,4 +222,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: signed auth, privacy, 30 species, rewards, reservation anti-abuse, enforced exact trade and provenance.")
+print("DROP1 API smoke test passed: auth, minimal bootstrap privacy, 30 species, late-payment fulfillment, reservation anti-abuse, exact trade and provenance.")
