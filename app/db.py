@@ -92,6 +92,15 @@ CREATE TABLE IF NOT EXISTS daily_mission_claims (
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
+CREATE TABLE IF NOT EXISTS daily_scout_targets (
+    telegram_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    character_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY(telegram_id, day),
+    FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
 
@@ -184,6 +193,15 @@ CREATE TABLE IF NOT EXISTS daily_mission_claims (
     mission_key TEXT NOT NULL,
     claimed_at TEXT NOT NULL,
     PRIMARY KEY(telegram_id, day, mission_key),
+    FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
+);
+
+CREATE TABLE IF NOT EXISTS daily_scout_targets (
+    telegram_id BIGINT NOT NULL,
+    day TEXT NOT NULL,
+    character_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY(telegram_id, day),
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
@@ -527,10 +545,10 @@ MISSION_DEFS = {
 }
 
 MILESTONE_REWARDS = {
-    5: {"xp": 50, "dust": 1},
-    10: {"xp": 100, "dust": 2},
-    20: {"xp": 250, "dust": 5},
-    30: {"xp": 500, "dust": 10},
+    5: {"xp": 50, "dust": 2},
+    10: {"xp": 100, "dust": 4},
+    20: {"xp": 250, "dust": 8},
+    30: {"xp": 500, "dust": 15},
 }
 
 
@@ -611,8 +629,14 @@ def retention_state(telegram_id: int):
                 "reward_dust": reward["dust"],
             })
 
+        scout = c.execute(
+            "SELECT character_id FROM daily_scout_targets WHERE telegram_id=? AND day=?",
+            (telegram_id, day)
+        ).fetchone()
+
         return {
             "day": day,
+            "scout_target_id": scout["character_id"] if scout else None,
             "daily": {
                 "streak": current_streak,
                 "can_claim": not daily_claimed,
@@ -713,3 +737,38 @@ def claim_collection_milestone(telegram_id: int, threshold: int):
             (reward["xp"], reward["dust"], telegram_id)
         )
         return {"threshold": threshold, "xp": reward["xp"], "dust": reward["dust"]}
+
+
+def spend_research_scout(telegram_id: int, candidate_ids):
+    import secrets as _secrets
+    ids = [str(x) for x in candidate_ids if x]
+    if not ids:
+        raise ValueError("collection_complete")
+    now = utcnow_dt()
+    day = now.date().isoformat()
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        row_sql = "SELECT dust FROM users WHERE telegram_id=?" + (" FOR UPDATE" if is_postgres() else "")
+        u = c.execute(row_sql, (telegram_id,)).fetchone()
+        if not u:
+            raise ValueError("user_not_found")
+        existing = c.execute(
+            "SELECT character_id FROM daily_scout_targets WHERE telegram_id=? AND day=?",
+            (telegram_id, day)
+        ).fetchone()
+        if existing:
+            return {"character_id": existing["character_id"], "spent_dust": 0, "existing": True}
+        if int(u["dust"] or 0) < 2:
+            raise ValueError("not_enough_dust")
+        character_id = _secrets.choice(ids)
+        c.execute("UPDATE users SET dust=dust-2 WHERE telegram_id=?", (telegram_id,))
+        c.execute(
+            "INSERT INTO daily_scout_targets(telegram_id,day,character_id,created_at) VALUES (?,?,?,?)",
+            (telegram_id, day, character_id, now.isoformat())
+        )
+        c.execute(
+            """INSERT INTO rewards(telegram_id,reward_key,amount,created_at)
+               VALUES (?,?,?,?) ON CONFLICT(telegram_id,reward_key) DO NOTHING""",
+            (telegram_id, f"scout:{day}", -2, now.isoformat())
+        )
+        return {"character_id": character_id, "spent_dust": 2, "existing": False}
