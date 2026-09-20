@@ -5,13 +5,30 @@ window.DROP1_ART={
   'c004':'/static/assets/species/pocket-raptor.jpg',
   'c005':'/static/assets/species/tidejaw.jpg',
   'c006':'/static/assets/species/suncrest.jpg',
+  'c007':'/static/assets/species/fernhorn.webp',
+  'c008':'/static/assets/species/cloudclaw.webp',
+  'c009':'/static/assets/species/dune-runner.webp',
+  'c010':'/static/assets/species/frostbite.webp',
   'r001':'/static/assets/species/crystal-ankyl.png',
   'r002':'/static/assets/neon-raptor.webp',
   'r003':'/static/assets/species/volt-stego.jpg',
   'r004':'/static/assets/species/obsidian-spino.jpg',
+  'r005':'/static/assets/species/solar-trike.webp',
+  'r006':'/static/assets/species/ghost-talon.webp',
+  'r007':'/static/assets/species/prism-diloph.webp',
+  'r008':'/static/assets/species/ironjaw.webp',
   'e001':'/static/assets/species/void-rex.jpg',
   'e002':'/static/assets/species/aurora-quetzal.jpg',
-  'l001':'/static/assets/species/aurum-rex.jpg'
+  'e003':'/static/assets/species/thunder-ankyl.webp',
+  'e004':'/static/assets/species/eclipse-spino.webp',
+  'e005':'/static/assets/species/quantum-raptor.webp',
+  'e006':'/static/assets/species/celestial-stego.webp',
+  'l001':'/static/assets/species/aurum-rex.jpg',
+  'l002':'/static/assets/species/alpha-zero.webp',
+  'l003':'/static/assets/species/leviathan-spino.webp',
+  'l004':'/static/assets/species/crown-titan.webp',
+  'm001':'/static/assets/species/the-first.webp',
+  'm002':'/static/assets/species/origin-beast.webp'
 };
 window.DROP1_SPIN={
   'r002':['/static/assets/neon-raptor.webp']
