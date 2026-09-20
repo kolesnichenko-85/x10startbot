@@ -467,10 +467,8 @@ async def telegram_webhook(secret: str, request: Request):
         if rows:
             lines = ["🏆 DROP1 Leaderboard"]
             for idx, row in enumerate(rows, start=1):
-                name = row["username"] or row["first_name"] or f"user_{row['telegram_id']}"
-                if row["username"]:
-                    name = "@" + name
-                lines.append(f"{idx}. {name} — {row['xp']} XP · {row['drops']} drops")
+                name = public_collector_label(int(row["telegram_id"]))
+                lines.append(f"{idx}. {name} — {row['xp']} XP · {row['drops']} hatches")
             await send_message(chat_id, "\n".join(lines))
         else:
             await send_message(chat_id, "The leaderboard is empty. Be the first collector.")
