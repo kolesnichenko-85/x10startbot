@@ -1,4 +1,5 @@
 import os, tempfile, pathlib, sys
+import hashlib, hmac, json, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 tmp = pathlib.Path(tempfile.gettempdir()) / "drop1_ci.db"
@@ -17,13 +18,37 @@ os.environ["BASE_URL"]=""
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db import reserve_purchase
+from app.auth import validate_init_data
 
 H1={"X-Telegram-Init-Data":"dev:777000001"}
 H2={"X-Telegram-Init-Data":"dev:777000002"}
 H3={"X-Telegram-Init-Data":"dev:777000003"}
 H4={"X-Telegram-Init-Data":"dev:777000004"}
 
+def signed_init_data(auth_date):
+    user=json.dumps({"id":888000001,"first_name":"Signed","username":"signed_user"},separators=(",",":"))
+    pairs={"auth_date":str(auth_date),"query_id":"AAEAA","user":user}
+    data="\n".join(f"{k}={v}" for k,v in sorted(pairs.items()))
+    secret=hmac.new(b"WebAppData",b"ci-not-a-real-token",hashlib.sha256).digest()
+    pairs["hash"]=hmac.new(secret,data.encode(),hashlib.sha256).hexdigest()
+    from urllib.parse import urlencode
+    return urlencode(pairs)
+
 with TestClient(app) as client:
+    # Telegram auth accepts current signed initData and rejects replay/future timestamps.
+    signed=signed_init_data(int(time.time()))
+    assert validate_init_data(signed)["user"]["id"]==888000001
+    try:
+        validate_init_data(signed_init_data(int(time.time())+120))
+        raise AssertionError("future auth_date should fail")
+    except ValueError as e:
+        assert "future" in str(e)
+    try:
+        validate_init_data(signed_init_data(int(time.time())-7200))
+        raise AssertionError("stale auth_date should fail")
+    except ValueError as e:
+        assert "stale" in str(e)
+
     health=client.get("/health")
     assert health.status_code==200 and health.json()["ok"] is True
 
@@ -116,7 +141,7 @@ with TestClient(app) as client:
     listing=client.post("/api/market/listings",headers=H1,json={
         "item_id":item1,
         "mode":"trade",
-        "want_character_id":"r002",
+        "want_character_id":"c001",
         "want_rarity":"rare",
         "note":"CI smoke listing"
     })
@@ -128,13 +153,24 @@ with TestClient(app) as client:
     assert feed.status_code==200, feed.text
     rows=feed.json()["listings"]
     assert len(rows)==1
-    assert rows[0]["want_character_id"]=="r002"
+    assert rows[0]["want_character_id"]=="c001"
+    assert rows[0]["want_rarity"] is None
     seller=rows[0]["seller"]
     assert seller["is_mine"] is True
     assert seller["label"]=="You"
     for forbidden in ("id","username","first_name","telegram_id"):
         assert forbidden not in seller
     assert "owner_id" not in rows[0]["item"]
+
+    # Exact trade targets are server-enforced, not just UI hints.
+    h3_collection=client.get("/api/bootstrap",headers=H3).json()["collection"]
+    mismatch_item=next(x for x in h3_collection if x["id"]=="c002")["item_id"]
+    mismatch=client.post(f"/api/market/listings/{listing_id}/offers",headers=H3,json={
+        "offered_item_id":mismatch_item,
+        "note":"Should be rejected"
+    })
+    assert mismatch.status_code==409, mismatch.text
+    assert "only accepts" in mismatch.text
 
     # Collector 2 hatches and offers their exact serial.
     b2=client.get("/api/bootstrap",headers=H2)
@@ -177,4 +213,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: privacy-safe referrals/leaderboard, 30 species, rewards, reservation anti-abuse, exact trade and provenance.")
+print("DROP1 API smoke test passed: signed auth, privacy, 30 species, rewards, reservation anti-abuse, enforced exact trade and provenance.")
