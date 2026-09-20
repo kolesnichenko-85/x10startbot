@@ -54,6 +54,8 @@ checks={
     "collection_milestones":"COLLECTION MILESTONES" in index and "milestoneGrid" in index,
     "collection_book":"Collection Book" in index and "bookGrid" in index and "renderBook" in index,
     "collector_rank":"rankLine" in index and "renderRank" in index,
+    "exact_trade_target":"wantSpecies" in market and "want_character_id" in market and "offerId" in market,
+    "invoice_cancel":"/api/purchases/" in index and "/cancel" in index,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
