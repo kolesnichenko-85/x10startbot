@@ -162,3 +162,14 @@ def check_no_obsolete_hatch_runtime():
     assert not (ROOT / "app/static/hatch_engine_v21.js").exists()
 
 check_no_obsolete_hatch_runtime()
+
+
+def check_payment_fulfillment_safety():
+    db = (ROOT / "app/db.py").read_text()
+    main_py = (ROOT / "app/main.py").read_text()
+    assert 'include_test=False, now=now' in db, "Paid pool must ignore QA hatches"
+    assert 'p["status"] not in {"pending", "expired", "cancelled"}' in db, "Confirmed late payments must remain fulfillable"
+    assert '"user": {\n            "xp": u["xp"],\n            "dust": u["dust"]' in main_py, "Bootstrap should not return raw Telegram profile fields"
+    assert "include_test=FREE_TEST_MODE" in main_py, "Displayed pool must match active mode"
+
+check_payment_fulfillment_safety()
