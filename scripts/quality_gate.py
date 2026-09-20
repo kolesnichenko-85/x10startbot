@@ -117,3 +117,14 @@ def check_paid_launch_guard():
     assert "Paid DROP is locked until persistent storage is connected" in main_py
 
 check_paid_launch_guard()
+
+
+def check_release_performance():
+    main_py = (ROOT / "app/main.py").read_text()
+    index = (ROOT / "app/static/index.html").read_text()
+    assert 'max-age=604800, immutable' in main_py
+    assert '@app.head("/")' in main_py
+    assert 'loading="lazy"' in index
+    assert 'primal-egg.png" as="image"' in index
+
+check_release_performance()
