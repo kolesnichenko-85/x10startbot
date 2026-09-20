@@ -184,7 +184,19 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
             "serial_no": row["serial_no"],
             "acquired_at": row["acquired_at"],
         })
-    unique = len(set(i["id"] for i in items))
+    owned_species = {i["id"] for i in items}
+    unique = len(owned_species)
+    set_order = []
+    set_map = {}
+    for ch in CATALOG:
+        name = ch.get("set") or "Primal Hatch"
+        if name not in set_map:
+            set_map[name] = {"name": name, "rarity": ch.get("rarity","common"), "total": 0, "owned": 0}
+            set_order.append(name)
+        set_map[name]["total"] += 1
+        if ch["id"] in owned_species:
+            set_map[name]["owned"] += 1
+    season_sets = [set_map[name] for name in set_order]
     retention = retention_state(tid)
     if retention.get("scout_target_id"):
         target = by_id.get(retention["scout_target_id"])
@@ -204,6 +216,7 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         "catalog_total": len(CATALOG),
         "collection": items,
         "unique_count": unique,
+        "season_sets": season_sets,
         "pool": pool_status(),
         "genesis_supply": GENESIS_SUPPLY,
         "trade_market_enabled": True,
