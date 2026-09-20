@@ -381,7 +381,7 @@ def reserve_purchase(pid: str, telegram_id: int, stars: int, base_supply: int, u
         ).fetchone()
         if active:
             raise ValueError("active_reservation_exists")
-        pool = _pool_snapshot(c, base_supply, users_per_unlock, drops_per_unlock, max_supply, include_test=True, now=now)
+        pool = _pool_snapshot(c, base_supply, users_per_unlock, drops_per_unlock, max_supply, include_test=False, now=now)
         if pool["remaining"] <= 0:
             raise ValueError("daily_pool_sold_out")
         expires = now + timedelta(minutes=ttl_minutes)
@@ -453,8 +453,8 @@ def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
         if p["status"] == "paid":
             item = c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
             return item, False
-        if p["status"] != "pending":
-            raise ValueError("purchase_not_pending")
+        if p["status"] not in {"pending", "expired", "cancelled"}:
+            raise ValueError("purchase_not_fulfillable")
 
         next_serial = _next_serial(c, character_id)
         now = utcnow()
