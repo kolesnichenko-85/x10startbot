@@ -149,13 +149,10 @@ window.DROP1_PHYSICAL={};
     try{window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light')}catch(e){}
   }
   q('specClose').onclick=()=>modal.classList.remove('open');
-  q('specTrade').onclick=async()=>{
+  q('specTrade').onclick=()=>{
     if(!current)return;
-    try{
-      await window.api('/api/market/listings',{method:'POST',body:JSON.stringify({item_id:current.item_id,mode:'trade',want_rarity:'',note:''})});window.track?.('listing_create',{item_id:current.item_id,character_id:current.id,source:'specimen'});
-      window.toast('Creature listed for trade');
-      setTimeout(()=>location.href='/static/market.html',550);
-    }catch(e){window.toast(e.message||'Could not list creature')}
+    window.track?.('market_open',{item_id:current.item_id,character_id:current.id,source:'specimen_trade'});
+    location.href='/static/market.html?offer='+encodeURIComponent(current.item_id);
   };
   q('specPhysical').onclick=()=>{
     if(!current)return;
