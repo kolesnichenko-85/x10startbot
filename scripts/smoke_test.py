@@ -24,6 +24,7 @@ H1={"X-Telegram-Init-Data":"dev:777000001"}
 H2={"X-Telegram-Init-Data":"dev:777000002"}
 H3={"X-Telegram-Init-Data":"dev:777000003"}
 H4={"X-Telegram-Init-Data":"dev:777000004"}
+H5={"X-Telegram-Init-Data":"dev:777000005"}
 
 def signed_init_data(auth_date):
     user=json.dumps({"id":888000001,"first_name":"Signed","username":"signed_user"},separators=(",",":"))
@@ -124,8 +125,9 @@ with TestClient(app) as client:
 
     # Telegram-confirmed payment must still be fulfilled if our temporary reservation
     # was cancelled/expired at the edge of checkout.
-    reserve_purchase("ci_late_pay",777000001,50,200,10,3,300,ttl_minutes=10)
-    assert client.post("/api/purchases/ci_late_pay/cancel",headers=H1,json={}).status_code==200
+    assert client.get("/api/bootstrap",headers=H5).status_code==200
+    reserve_purchase("ci_late_pay",777000005,50,200,10,3,300,ttl_minutes=10)
+    assert client.post("/api/purchases/ci_late_pay/cancel",headers=H5,json={}).status_code==200
     late_item, late_minted = mark_paid_and_mint("ci_late_pay","ci_charge_late","c010")
     assert late_minted is True and late_item["character_id"]=="c010"
     assert get_purchase("ci_late_pay")["status"]=="paid"
