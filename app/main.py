@@ -31,7 +31,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.12.0-release-candidate"
+APP_VERSION = "0.13.0-release-candidate"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -459,7 +459,7 @@ async def telegram_webhook(secret: str, request: Request):
 
     if chat_id and text.startswith("/start"):
         markup = {"inline_keyboard": [[{"text": "Open DROP1", "web_app": {"url": launch_url}}]]} if launch_url else None
-        await send_message(chat_id, "DROP1 is a digital creature-collection game. Every paid egg hatches one guaranteed creature.\nUse /odds for rarity probabilities, /terms for purchase terms and /support for help.", markup)
+        await send_message(chat_id, "DROP1 is a digital creature-collection game. Every paid egg hatches one guaranteed creature.\nUse /odds for rarity probabilities, /terms for purchase terms, /privacy for privacy information and /support for help.", markup)
         return {"ok": True}
     if chat_id and text.startswith("/collection"):
         markup = {"inline_keyboard": [[{"text": "Open my collection", "web_app": {"url": launch_url}}]]} if launch_url else None
@@ -481,6 +481,9 @@ async def telegram_webhook(secret: str, request: Request):
         return {"ok": True}
     if chat_id and text.startswith("/terms"):
         await send_message(chat_id, f"{base}/terms" if base else "Terms will be available in the Mini App.")
+        return {"ok": True}
+    if chat_id and text.startswith("/privacy"):
+        await send_message(chat_id, f"{base}/privacy" if base else "Privacy information will be available in the Mini App.")
         return {"ok": True}
     if chat_id and text.startswith("/support"):
         support = SUPPORT_HANDLE or "the project operator"
