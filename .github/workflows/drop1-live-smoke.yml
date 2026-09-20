@@ -21,4 +21,5 @@ jobs:
       - name: Live production smoke
         env:
           DROP1_LIVE_URL: https://drop1-game.onrender.com
+          DROP1_EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: python scripts/live_smoke.py
