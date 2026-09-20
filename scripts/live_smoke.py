@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -70,11 +71,34 @@ for row in leaders:
 status,art_headers,art_body=request("/static/art.js")
 assert status==200
 art=art_body.decode("utf-8")
+expected_ids=[]
 for prefix,count in (("c",10),("r",8),("e",6),("l",4),("m",2)):
     for n in range(1,count+1):
         cid=f"{prefix}{n:03d}"
+        expected_ids.append(cid)
         assert f"'{cid}':" in art, cid
 assert "no-store" in art_headers.get("cache-control","")
+
+# Every production creature art mapping must resolve from the live deployment,
+# not merely exist in source. This catches broken paths/case changes after deploy.
+art_pairs=dict(re.findall(r"'([crelm]\\d{3})':'([^']+)'",art))
+assert set(expected_ids).issubset(art_pairs),sorted(set(expected_ids)-set(art_pairs))
+for cid in expected_ids:
+    path=art_pairs[cid]
+    assert path.startswith("/static/"),(cid,path)
+    status,h,b=request(path)
+    assert status==200,(cid,path,status)
+    assert len(b)>=10000,(cid,path,len(b))
+    ctype=h.get("content-type","")
+    assert ctype.startswith("image/"),(cid,path,ctype)
+
+for path,needle in (
+    ("/static/hatch_canvas_v22.js","hatchCanvas22"),
+    ("/static/market.html","PROPOSE TRADE"),
+):
+    status,_,body=request(path)
+    assert status==200,path
+    assert needle in body.decode("utf-8"),(path,needle)
 
 for path,min_size in (
     ("/static/assets/primal-egg.png",500000),
