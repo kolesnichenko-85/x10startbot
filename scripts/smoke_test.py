@@ -15,6 +15,7 @@ os.environ["BASE_URL"]=""
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.db import reserve_purchase
 
 H1={"X-Telegram-Init-Data":"dev:777000001"}
 H2={"X-Telegram-Init-Data":"dev:777000002"}
@@ -81,6 +82,18 @@ with TestClient(app) as client:
     final_season=client.get("/api/bootstrap",headers=H4).json()
     assert final_season["unique_count"]==30
     assert final_season["user"]["dust"]==before_dust+1
+
+    # One user cannot reserve the global paid pool repeatedly.
+    reserve_purchase("ci_res_1",777000001,50,200,10,3,300,ttl_minutes=10)
+    try:
+        reserve_purchase("ci_res_2",777000001,50,200,10,3,300,ttl_minutes=10)
+        raise AssertionError("second active reservation should be blocked")
+    except ValueError as e:
+        assert str(e)=="active_reservation_exists"
+    cancelled=client.post("/api/purchases/ci_res_1/cancel",headers=H1,json={})
+    assert cancelled.status_code==200, cancelled.text
+    reserve_purchase("ci_res_2",777000001,50,200,10,3,300,ttl_minutes=10)
+    assert client.post("/api/purchases/ci_res_2/cancel",headers=H1,json={}).status_code==200
 
     # Collector 1 hatches and lists a specimen.
     before=client.get("/api/bootstrap",headers=H1)
@@ -156,4 +169,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: full 30-species season, duplicate Dust, expedition, Scout, milestones, market and provenance.")
+print("DROP1 API smoke test passed: 30-species season, rewards, reservation anti-abuse, exact market trade and provenance.")
