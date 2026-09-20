@@ -152,7 +152,39 @@ def catalog_map():
     return {c["id"]: c for c in CATALOG}
 
 
-def collector_label(telegram_id: int) -> str:
+def _owned_for_update(c, item_id: int):
+    sql = "SELECT * FROM owned_items WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
+    return c.execute(sql, (item_id,)).fetchone()
+
+
+def _listing_for_update(c, listing_id: str):
+    sql = "SELECT * FROM market_listings WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
+    return c.execute(sql, (listing_id,)).fetchone()
+
+
+def _offer_for_update(c, offer_id: str):
+    sql = "SELECT * FROM market_offers WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
+    return c.execute(sql, (offer_id,)).fetchone()
+
+
+def _matches_listing(listing, offered_item) -> bool:
+    if not listing or not offered_item:
+        return False
+    wanted_character = listing["want_character_id"]
+    if wanted_character:
+        return offered_item["character_id"] == wanted_character
+    wanted_rarity = listing["want_rarity"]
+    if wanted_rarity:
+        ch = catalog_map().get(offered_item["character_id"])
+        return bool(ch and ch.get("rarity") == wanted_rarity)
+    return True
+
+
+def collector_label(c, telegram_id: int) -> str:
+    row = c.execute("SELECT ref_code FROM users WHERE telegram_id=?", (telegram_id,)).fetchone()
+    code = row["ref_code"] if row and row["ref_code"] else None
+    if code:
+        return f"Collector {str(code)[:6].upper()}"
     digest = hashlib.sha256(f"drop1:{telegram_id}".encode()).hexdigest()[:6].upper()
     return f"Collector {digest}"
 
@@ -186,7 +218,7 @@ def _listing_payload(c, row, cmap, viewer_id=None):
         "status": row["status"],
         "created_at": row["created_at"],
         "seller": {
-            "label": "You" if viewer_id == row["seller_id"] else collector_label(row["seller_id"]),
+            "label": "You" if viewer_id == row["seller_id"] else collector_label(c, row["seller_id"]),
             "is_mine": bool(viewer_id == row["seller_id"]),
         },
         "item": public_item(item, cmap) if item else None,
@@ -202,7 +234,7 @@ def _offer_payload(c, row, cmap, viewer_id=None):
         "id": row["id"],
         "listing_id": row["listing_id"],
         "offerer": {
-            "label": "You" if viewer_id == row["offerer_id"] else collector_label(row["offerer_id"]),
+            "label": "You" if viewer_id == row["offerer_id"] else collector_label(c, row["offerer_id"]),
             "is_mine": bool(viewer_id == row["offerer_id"]),
         },
         "offered_item": public_item(offered, cmap) if offered else None,
@@ -277,13 +309,15 @@ async def create_listing(request: Request, x_telegram_init_data: str | None = He
         raise HTTPException(status_code=400, detail="Unknown rarity")
     if want_character_id and want_character_id not in catalog_map():
         raise HTTPException(status_code=400, detail="Unknown character")
+    if want_character_id:
+        want_rarity = None
 
     listing_id = "lst_" + uuid.uuid4().hex
     now = utcnow()
     try:
         with conn() as c:
             c.execute("BEGIN IMMEDIATE")
-            item = c.execute("SELECT * FROM owned_items WHERE id=?", (item_id,)).fetchone()
+            item = _owned_for_update(c, item_id)
             if not item or item["telegram_id"] != tid:
                 raise HTTPException(status_code=404, detail="You do not own this creature")
             existing_offer = c.execute(
@@ -310,7 +344,7 @@ async def cancel_listing(listing_id: str, x_telegram_init_data: str | None = Hea
     now = utcnow()
     with conn() as c:
         c.execute("BEGIN IMMEDIATE")
-        row = c.execute("SELECT * FROM market_listings WHERE id=?", (listing_id,)).fetchone()
+        row = _listing_for_update(c, listing_id)
         if not row or row["seller_id"] != tid:
             raise HTTPException(status_code=404, detail="Listing not found")
         if row["status"] != "active":
@@ -335,12 +369,12 @@ async def create_offer(listing_id: str, request: Request, x_telegram_init_data: 
     try:
         with conn() as c:
             c.execute("BEGIN IMMEDIATE")
-            listing = c.execute("SELECT * FROM market_listings WHERE id=?", (listing_id,)).fetchone()
+            listing = _listing_for_update(c, listing_id)
             if not listing or listing["status"] != "active":
                 raise HTTPException(status_code=404, detail="Listing is not active")
             if listing["seller_id"] == tid:
                 raise HTTPException(status_code=409, detail="You cannot offer on your own listing")
-            offered = c.execute("SELECT * FROM owned_items WHERE id=?", (offered_item_id,)).fetchone()
+            offered = _owned_for_update(c, offered_item_id)
             if not offered or offered["telegram_id"] != tid:
                 raise HTTPException(status_code=404, detail="You do not own the offered creature")
             listed_elsewhere = c.execute(
@@ -349,6 +383,9 @@ async def create_offer(listing_id: str, request: Request, x_telegram_init_data: 
             ).fetchone()
             if listed_elsewhere:
                 raise HTTPException(status_code=409, detail="Offered creature is already listed")
+            if not _matches_listing(listing, offered):
+                wanted = listing["want_character_id"] or listing["want_rarity"] or "requested target"
+                raise HTTPException(status_code=409, detail=f"This listing only accepts {wanted}")
             c.execute(
                 """INSERT INTO market_offers(
                        id,listing_id,offerer_id,offered_item_id,topup_stars,note,status,created_at
@@ -367,11 +404,9 @@ async def reject_offer(offer_id: str, x_telegram_init_data: str | None = Header(
     now = utcnow()
     with conn() as c:
         c.execute("BEGIN IMMEDIATE")
-        row = c.execute(
-            """SELECT o.*, l.seller_id FROM market_offers o
-               JOIN market_listings l ON l.id=o.listing_id WHERE o.id=?""",
-            (offer_id,),
-        ).fetchone()
+        sql = """SELECT o.*, l.seller_id FROM market_offers o
+                 JOIN market_listings l ON l.id=o.listing_id WHERE o.id=?""" + (" FOR UPDATE OF o" if is_postgres() else "")
+        row = c.execute(sql, (offer_id,)).fetchone()
         if not row or row["seller_id"] != tid:
             raise HTTPException(status_code=404, detail="Offer not found")
         if row["status"] != "pending":
@@ -386,7 +421,7 @@ async def withdraw_offer(offer_id: str, x_telegram_init_data: str | None = Heade
     now = utcnow()
     with conn() as c:
         c.execute("BEGIN IMMEDIATE")
-        row = c.execute("SELECT * FROM market_offers WHERE id=?", (offer_id,)).fetchone()
+        row = _offer_for_update(c, offer_id)
         if not row or row["offerer_id"] != tid:
             raise HTTPException(status_code=404, detail="Offer not found")
         if row["status"] != "pending":
@@ -419,6 +454,8 @@ async def accept_offer(offer_id: str, x_telegram_init_data: str | None = Header(
             raise HTTPException(status_code=409, detail="Seller no longer owns the listed creature")
         if not buyer_item or buyer_item["telegram_id"] != offer["offerer_id"]:
             raise HTTPException(status_code=409, detail="Offerer no longer owns the offered creature")
+        if not _matches_listing(listing, buyer_item):
+            raise HTTPException(status_code=409, detail="Offered creature no longer matches this listing")
 
         c.execute("UPDATE owned_items SET telegram_id=? WHERE id=?", (offer["offerer_id"], seller_item["id"]))
         c.execute("UPDATE owned_items SET telegram_id=? WHERE id=?", (seller_id, buyer_item["id"]))
