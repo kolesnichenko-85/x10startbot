@@ -436,12 +436,15 @@ async def accept_offer(offer_id: str, x_telegram_init_data: str | None = Header(
     now = utcnow()
     with conn() as c:
         c.execute("BEGIN IMMEDIATE")
-        offer_sql = "SELECT * FROM market_offers WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
-        offer = c.execute(offer_sql, (offer_id,)).fetchone()
-        if not offer or offer["status"] != "pending":
+        # Lock order is listing -> offer -> specimens. cancel_listing uses the same
+        # listing-first order, preventing an accept/cancel deadlock on PostgreSQL.
+        probe = c.execute("SELECT listing_id FROM market_offers WHERE id=?", (offer_id,)).fetchone()
+        if not probe:
             raise HTTPException(status_code=404, detail="Offer is not active")
-        listing_sql = "SELECT * FROM market_listings WHERE id=?" + (" FOR UPDATE" if is_postgres() else "")
-        listing = c.execute(listing_sql, (offer["listing_id"],)).fetchone()
+        listing = _listing_for_update(c, probe["listing_id"])
+        offer = _offer_for_update(c, offer_id)
+        if not offer or offer["status"] != "pending" or offer["listing_id"] != probe["listing_id"]:
+            raise HTTPException(status_code=404, detail="Offer is not active")
         if not listing or listing["status"] != "active" or listing["seller_id"] != seller_id:
             raise HTTPException(status_code=404, detail="Listing is not active")
         if listing["mode"] != "trade" or not offer["offered_item_id"]:
