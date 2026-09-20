@@ -18,10 +18,42 @@ from app.main import app
 
 H1={"X-Telegram-Init-Data":"dev:777000001"}
 H2={"X-Telegram-Init-Data":"dev:777000002"}
+H3={"X-Telegram-Init-Data":"dev:777000003"}
 
 with TestClient(app) as client:
     health=client.get("/health")
     assert health.status_code==200 and health.json()["ok"] is True
+
+    # Retention loop: daily claim, missions, collection milestone and duplicate Dust.
+    r3=client.get("/api/bootstrap",headers=H3)
+    assert r3.status_code==200
+    retention=r3.json()["retention"]
+    assert retention["daily"]["can_claim"] is True
+
+    daily=client.post("/api/rewards/daily",headers=H3,json={})
+    assert daily.status_code==200, daily.text
+    assert daily.json()["reward"]["streak"]==1
+    assert daily.json()["reward"]["dust"]>=1
+
+    # Five sequential QA hatches are distinct release-quality species.
+    for _ in range(5):
+        h=client.post("/api/test/drop",headers=H3,json={})
+        assert h.status_code==200, h.text
+
+    # Hatch mission derives from ownership; inspect and market missions derive from product events.
+    assert client.post("/api/events",headers=H3,json={"event":"specimen_open","source":"ci"}).status_code==200
+    assert client.post("/api/events",headers=H3,json={"event":"market_open","source":"ci"}).status_code==200
+    for key in ("hatch_one","inspect_one","visit_market"):
+        claim=client.post(f"/api/missions/{key}/claim",headers=H3,json={})
+        assert claim.status_code==200, (key, claim.text)
+
+    milestone=client.post("/api/milestones/5/claim",headers=H3,json={})
+    assert milestone.status_code==200, milestone.text
+    after_rewards=client.get("/api/bootstrap",headers=H3).json()
+    assert after_rewards["retention"]["daily"]["claimed"] is True
+    assert all(m["claimed"] for m in after_rewards["retention"]["missions"])
+    assert next(x for x in after_rewards["retention"]["milestones"] if x["threshold"]==5)["claimed"] is True
+    assert after_rewards["user"]["dust"]>=5
 
     # Collector 1 hatches and lists a specimen.
     before=client.get("/api/bootstrap",headers=H1)
@@ -97,4 +129,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: health, two-user hatch, privacy-safe market, offer, atomic trade and provenance.")
+print("DROP1 API smoke test passed: retention rewards, missions, milestones, two-user market trade and provenance.")
