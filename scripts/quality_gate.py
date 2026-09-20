@@ -69,3 +69,19 @@ def check_creature_batch_01():
         assert f'"id":"{cid}"' in catalog, f"Missing catalog entry for {cid}"
 
 check_creature_batch_01()
+
+def check_retention_runtime():
+    db = (ROOT / "app/db.py").read_text()
+    main_py = (ROOT / "app/main.py").read_text()
+    index = (ROOT / "app/static/index.html").read_text()
+    assert "def retention_state" in db
+    assert "def claim_daily_reward" in db
+    assert "def claim_daily_mission" in db
+    assert "def claim_collection_milestone" in db
+    assert "def spend_research_scout" in db
+    assert "/api/rewards/daily" in main_py
+    assert "/api/research/scout" in main_py
+    assert "Daily Expedition" in index
+    assert "Research Dust" in index
+
+check_retention_runtime()
