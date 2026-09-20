@@ -84,6 +84,7 @@ with TestClient(app) as client:
     assert final_season["user"]["dust"]==before_dust+1
 
     # One user cannot reserve the global paid pool repeatedly.
+    assert client.get("/api/bootstrap",headers=H1).status_code==200
     reserve_purchase("ci_res_1",777000001,50,200,10,3,300,ttl_minutes=10)
     try:
         reserve_purchase("ci_res_2",777000001,50,200,10,3,300,ttl_minutes=10)
@@ -110,6 +111,7 @@ with TestClient(app) as client:
     listing=client.post("/api/market/listings",headers=H1,json={
         "item_id":item1,
         "mode":"trade",
+        "want_character_id":"r002",
         "want_rarity":"rare",
         "note":"CI smoke listing"
     })
@@ -121,6 +123,7 @@ with TestClient(app) as client:
     assert feed.status_code==200, feed.text
     rows=feed.json()["listings"]
     assert len(rows)==1
+    assert rows[0]["want_character_id"]=="r002"
     seller=rows[0]["seller"]
     assert seller["is_mine"] is True
     assert seller["label"]=="You"
