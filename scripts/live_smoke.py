@@ -5,6 +5,7 @@ import urllib.error
 import urllib.request
 
 BASE_URL=os.getenv("DROP1_LIVE_URL","https://drop1-game.onrender.com").rstrip("/")
+EXPECTED_SHA=os.getenv("DROP1_EXPECTED_SHA","").strip()
 
 def request(path, method="GET", timeout=30):
     req=urllib.request.Request(
@@ -24,8 +25,15 @@ def wait_health():
             if status==200:
                 data=json.loads(body.decode())
                 if data.get("ok") is True:
-                    return headers,data
-                last=f"health ok flag missing: {data}"
+                    deployed=str(data.get("git_commit") or "")
+                    if EXPECTED_SHA and deployed and not deployed.startswith(EXPECTED_SHA):
+                        last=f"waiting for deploy {EXPECTED_SHA[:8]}, live is {deployed[:8]}"
+                    elif EXPECTED_SHA and not deployed:
+                        last="live health is missing git_commit fingerprint"
+                    else:
+                        return headers,data
+                else:
+                    last=f"health ok flag missing: {data}"
         except Exception as e:
             last=repr(e)
         time.sleep(8)
@@ -95,6 +103,7 @@ assert status==200
 print("DROP1 live smoke passed")
 print(json.dumps({
     "version":health.get("version"),
+    "git_commit":health.get("git_commit"),
     "stage":health.get("stage"),
     "storage":health.get("storage"),
     "persistent_storage":health.get("persistent_storage"),
