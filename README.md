@@ -56,4 +56,4 @@ The closed-beta product is live and automatically tested. Public paid hatching r
 
 The `/health` endpoint exposes `paid_launch_ready` and `launch_blockers`. The server refuses paid invoices while persistent storage is missing.
 
-See `docs/RELEASE_CANDIDATE_012.md` and `docs/DROP1_PRODUCT_OS.md`.
+See `docs/RELEASE_CANDIDATE.md` and `docs/DROP1_PRODUCT_OS.md`.
