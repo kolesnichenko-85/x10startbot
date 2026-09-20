@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 
 from .auth import validate_init_data
 from .catalog import CATALOG
-from .db import upsert_user
+from .db import upsert_user, get_user_by_ref_code
 from .storage import conn, is_postgres, INTEGRITY_ERRORS
 
 router = APIRouter()
@@ -138,10 +138,9 @@ def auth_user(init_data: str | None):
         start = payload.get("start_param")
         referrer_id = None
         if start and start.startswith("ref_"):
-            try:
-                referrer_id = int(start.split("_", 1)[1])
-            except Exception:
-                referrer_id = None
+            code = start.split("_", 1)[1].strip()
+            ref = get_user_by_ref_code(code)
+            referrer_id = int(ref["telegram_id"]) if ref else None
         tid = int(u["id"])
         upsert_user(tid, u.get("username"), u.get("first_name"), referrer_id)
         return tid
