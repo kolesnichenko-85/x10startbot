@@ -12,7 +12,8 @@ from .db import (
     init_db, upsert_user, get_user, reserve_purchase, cancel_purchase, get_purchase,
     purchase_reservation_valid, mark_paid_and_mint, mark_test_and_mint, collection,
     leaderboard, daily_pool_status, track_event, retention_state,
-    claim_daily_reward, claim_daily_mission, claim_collection_milestone
+    claim_daily_reward, claim_daily_mission, claim_collection_milestone,
+    spend_research_scout
 )
 from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 from .market_api import router as market_router, init_market
@@ -148,7 +149,7 @@ async def product_event(request: Request, x_telegram_init_data: str | None = Hea
     allowed = {
         "app_open","hatch_click","hatch_complete","specimen_open","market_open",
         "listing_create","offer_create","share_click","physical_interest",
-        "daily_claim","mission_claim","milestone_claim"
+        "daily_claim","mission_claim","milestone_claim","research_scout"
     }
     if event_name not in allowed:
         raise HTTPException(status_code=400, detail="Unknown event")
@@ -182,6 +183,12 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
             "acquired_at": row["acquired_at"],
         })
     unique = len(set(i["id"] for i in items))
+    retention = retention_state(tid)
+    if retention.get("scout_target_id"):
+        target = by_id.get(retention["scout_target_id"])
+        retention["scout_target"] = public_character(target) if target else None
+    else:
+        retention["scout_target"] = None
     return {
         "user": {
             "id": tid,
@@ -200,7 +207,7 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         "trade_market_enabled": True,
         "paid_resale_enabled": False,
         "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else "",
-        "retention": retention_state(tid),
+        "retention": retention,
     }
 
 @app.post("/api/rewards/daily")
@@ -247,6 +254,31 @@ async def milestone_claim(threshold: int, x_telegram_init_data: str | None = Hea
         raise HTTPException(status_code=400, detail=code)
     track_event(tid, "milestone_claim", source=f"species_{threshold}")
     return {"ok": True, "reward": reward, "retention": retention_state(tid)}
+
+
+@app.post("/api/research/scout")
+async def research_scout(x_telegram_init_data: str | None = Header(default=None)):
+    tid, _ = auth_user(x_telegram_init_data)
+    owned = {row["character_id"] for row in collection(tid)}
+    missing = [c["id"] for c in CATALOG if c["id"] not in owned]
+    try:
+        result = spend_research_scout(tid, missing)
+    except ValueError as e:
+        code = str(e)
+        if code == "not_enough_dust":
+            raise HTTPException(status_code=409, detail="You need 2 Research Dust")
+        if code == "collection_complete":
+            raise HTTPException(status_code=409, detail="Your species collection is complete")
+        raise HTTPException(status_code=400, detail=code)
+    character = next((c for c in CATALOG if c["id"] == result["character_id"]), None)
+    track_event(tid, "research_scout", character_id=result["character_id"], source="expedition")
+    return {
+        "ok": True,
+        "target": public_character(character) if character else None,
+        "spent_dust": result["spent_dust"],
+        "existing": result["existing"],
+        "retention": retention_state(tid),
+    }
 
 
 @app.get("/api/catalog")
