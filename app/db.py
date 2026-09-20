@@ -615,8 +615,8 @@ def retention_state(telegram_id: int):
             (telegram_id,)
         ).fetchone()["n"])
         reward_rows = c.execute(
-            "SELECT reward_key FROM rewards WHERE telegram_id=? AND reward_key LIKE 'collection:%'",
-            (telegram_id,)
+            "SELECT reward_key FROM rewards WHERE telegram_id=? AND reward_key LIKE ?",
+            (telegram_id, "collection:%")
         ).fetchall()
         reward_keys = {r["reward_key"] for r in reward_rows}
         milestones = []
