@@ -546,7 +546,7 @@ def collection(telegram_id: int):
 def leaderboard(limit=50):
     with conn() as c:
         return c.execute(
-            """SELECT telegram_id, username, first_name, xp, dust,
+            """SELECT telegram_id, ref_code, xp, dust,
                       (SELECT COUNT(*) FROM owned_items oi WHERE oi.telegram_id=users.telegram_id) AS drops
                FROM users ORDER BY xp DESC, drops DESC, created_at ASC LIMIT ?""",
             (limit,)
