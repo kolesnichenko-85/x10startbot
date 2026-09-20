@@ -30,6 +30,7 @@ def main():
         ROOT / "app/static/market.html",
         ROOT / "app/static/art.js",
         ROOT / "app/static/hatch_canvas_v22.js",
+        ROOT / "app/static/vendor/model-viewer.min.js",
         ROOT / "docs/DROP1_PRODUCT_OS.md",
     ]
     for p in required:
@@ -41,7 +42,7 @@ def main():
         "app/static/art.js",
         "app/static/hatch_canvas_v22.js",
     ])
-    forbidden = ["img.theapi.app/temp/", "dnznrvs05pmza.cloudfront.net"]
+    forbidden = ["img.theapi.app/temp/", "dnznrvs05pmza.cloudfront.net", "ajax.googleapis.com/ajax/libs/model-viewer"]
     for needle in forbidden:
         assert needle not in runtime, f"Temporary asset URL leaked into runtime: {needle}"
 
