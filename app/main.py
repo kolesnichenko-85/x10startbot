@@ -60,6 +60,10 @@ async def startup():
     except Exception as e:
         print(f"Telegram setup skipped/failed: {e}")
 
+def persistent_storage_ready():
+    return database_backend() == "postgres" or not os.getenv("DATABASE_PATH", "/tmp/drop1.db").startswith("/tmp/")
+
+
 def pool_status():
     return daily_pool_status(
         DAILY_POOL_BASE,
@@ -128,7 +132,15 @@ async def health():
         "version": APP_VERSION,
         "stage": "closed_beta",
         "storage": database_backend(),
-        "persistent_storage": database_backend() == "postgres" or not os.getenv("DATABASE_PATH", "/tmp/drop1.db").startswith("/tmp/"),
+        "persistent_storage": persistent_storage_ready(),
+        "paid_launch_ready": bool(os.getenv("BOT_TOKEN")) and persistent_storage_ready() and not FREE_TEST_MODE,
+        "launch_blockers": [
+            blocker for blocker, blocked in [
+                ("free_test_mode_enabled", FREE_TEST_MODE),
+                ("persistent_storage_missing", not persistent_storage_ready()),
+                ("bot_token_missing", not bool(os.getenv("BOT_TOKEN"))),
+            ] if blocked
+        ],
         "flagship_3d": True,
         "daily_expedition": True,
         "research_scout": True,
@@ -360,6 +372,8 @@ async def test_drop(x_telegram_init_data: str | None = Header(default=None)):
 async def invoice_drop(x_telegram_init_data: str | None = Header(default=None)):
     if FREE_TEST_MODE:
         raise HTTPException(status_code=409, detail="Paid DROP disabled while free test mode is active")
+    if not persistent_storage_ready():
+        raise HTTPException(status_code=503, detail="Paid DROP is locked until persistent storage is connected")
     tid, _ = auth_user(x_telegram_init_data)
     pid = uuid.uuid4().hex
     try:
