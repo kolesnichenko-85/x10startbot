@@ -56,6 +56,9 @@ checks={
     "collector_rank":"rankLine" in index and "renderRank" in index,
     "exact_trade_target":"wantSpecies" in market and "want_character_id" in market and "offerId" in market,
     "invoice_cancel":"/api/purchases/" in index and "/cancel" in index,
+    "visible_odds":"PRIMAL HATCH ODDS" in index and "Common 65%" in index and "No cash-out" in index,
+    "legal_links":'href="/terms"' in index and 'href="/privacy"' in index,
+    "local_model_viewer":"/static/vendor/model-viewer.min.js" in index and "ajax.googleapis.com/ajax/libs/model-viewer" not in index,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
