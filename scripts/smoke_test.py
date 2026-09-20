@@ -11,6 +11,7 @@ os.environ["DEV_MODE"]="true"
 os.environ["FREE_TEST_MODE"]="true"
 os.environ.setdefault("DATABASE_PATH", str(tmp))
 os.environ["BOT_TOKEN"]="ci-not-a-real-token"
+os.environ["BOT_USERNAME"]="drop1_ci_bot"
 os.environ["BASE_URL"]=""
 
 from fastapi.testclient import TestClient
