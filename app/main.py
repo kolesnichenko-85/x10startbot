@@ -31,7 +31,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.11.0-season1-complete"
+APP_VERSION = "0.12.0-release-candidate"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -351,10 +351,13 @@ async def invoice_drop(x_telegram_init_data: str | None = Header(default=None)):
             DAILY_POOL_DROPS_PER_UNLOCK,
             DAILY_POOL_MAX,
             kind="drop",
+            ttl_minutes=10,
         )
     except ValueError as e:
         if str(e) == "daily_pool_sold_out":
             raise HTTPException(status_code=409, detail="Today's global DROP pool is sold out")
+        if str(e) == "active_reservation_exists":
+            raise HTTPException(status_code=409, detail="Finish or cancel your current hatch first")
         raise
     try:
         url = await create_drop_invoice(pid, DROP_PRICE_STARS)
@@ -362,6 +365,18 @@ async def invoice_drop(x_telegram_init_data: str | None = Header(default=None)):
         cancel_purchase(pid)
         raise HTTPException(status_code=502, detail=str(e))
     return {"invoice_url": url, "purchase_id": pid, "pool": pool_status()}
+
+@app.post("/api/purchases/{purchase_id}/cancel")
+async def cancel_drop_reservation(purchase_id: str, x_telegram_init_data: str | None = Header(default=None)):
+    tid, _ = auth_user(x_telegram_init_data)
+    p = get_purchase(purchase_id)
+    if not p or int(p["telegram_id"]) != tid:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    if p["status"] == "paid":
+        raise HTTPException(status_code=409, detail="Paid hatch cannot be cancelled")
+    cancel_purchase(purchase_id)
+    return {"ok": True, "pool": pool_status()}
+
 
 @app.post("/telegram/webhook/{secret}")
 async def telegram_webhook(secret: str, request: Request):
