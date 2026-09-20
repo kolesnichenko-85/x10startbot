@@ -343,6 +343,19 @@ def reserve_purchase(pid: str, telegram_id: int, stars: int, base_supply: int, u
     with conn() as c:
         c.execute("BEGIN IMMEDIATE")
         _pool_write_lock(c)
+        c.execute(
+            "UPDATE purchases SET status='expired' WHERE status='pending' AND reservation_expires_at IS NOT NULL AND reservation_expires_at<=?",
+            (now.isoformat(),)
+        )
+        active = c.execute(
+            """SELECT id FROM purchases
+               WHERE telegram_id=? AND status='pending'
+                 AND reservation_expires_at IS NOT NULL AND reservation_expires_at>?
+               ORDER BY created_at DESC LIMIT 1""",
+            (telegram_id, now.isoformat())
+        ).fetchone()
+        if active:
+            raise ValueError("active_reservation_exists")
         pool = _pool_snapshot(c, base_supply, users_per_unlock, drops_per_unlock, max_supply, include_test=True, now=now)
         if pool["remaining"] <= 0:
             raise ValueError("daily_pool_sold_out")
