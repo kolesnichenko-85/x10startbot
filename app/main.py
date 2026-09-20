@@ -75,7 +75,7 @@ def pool_status():
         DAILY_POOL_USERS_PER_UNLOCK,
         DAILY_POOL_DROPS_PER_UNLOCK,
         DAILY_POOL_MAX,
-        include_test=True,
+        include_test=FREE_TEST_MODE,
     )
 
 def auth_user(init_data: str | None):
