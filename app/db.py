@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timezone, timedelta
 
 from .storage import conn, is_postgres, database_backend
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     dust INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     first_paid_at TEXT,
+    ref_code TEXT,
     daily_streak INTEGER NOT NULL DEFAULT 0,
     last_daily_claim TEXT,
     FOREIGN KEY(referrer_id) REFERENCES users(telegram_id)
@@ -100,6 +102,12 @@ CREATE TABLE IF NOT EXISTS daily_scout_targets (
     PRIMARY KEY(telegram_id, day),
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
+ON users(ref_code) WHERE ref_code IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
+ON users(ref_code) WHERE ref_code IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
@@ -222,6 +230,7 @@ def init_db():
         if is_postgres():
             c.execute("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS pool_day TEXT")
             c.execute("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS reservation_expires_at TEXT")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_code TEXT")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_streak INTEGER NOT NULL DEFAULT 0")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_daily_claim TEXT")
         else:
@@ -231,10 +240,13 @@ def init_db():
             if "reservation_expires_at" not in cols:
                 c.execute("ALTER TABLE purchases ADD COLUMN reservation_expires_at TEXT")
             user_cols = {r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()}
+            if "ref_code" not in user_cols:
+                c.execute("ALTER TABLE users ADD COLUMN ref_code TEXT")
             if "daily_streak" not in user_cols:
                 c.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER NOT NULL DEFAULT 0")
             if "last_daily_claim" not in user_cols:
                 c.execute("ALTER TABLE users ADD COLUMN last_daily_claim TEXT")
+        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code_runtime ON users(ref_code) WHERE ref_code IS NOT NULL")
 
 
 def utcnow_dt():
@@ -331,11 +343,28 @@ def upsert_user(telegram_id: int, username: str|None, first_name: str|None, refe
             "UPDATE users SET username=?, first_name=? WHERE telegram_id=?",
             (username, first_name, telegram_id)
         )
+        row = c.execute("SELECT ref_code FROM users WHERE telegram_id=?", (telegram_id,)).fetchone()
+        if row and not row["ref_code"]:
+            for _ in range(5):
+                code = secrets.token_urlsafe(7).replace("-", "").replace("_", "")[:10]
+                try:
+                    c.execute("UPDATE users SET ref_code=? WHERE telegram_id=? AND ref_code IS NULL", (code, telegram_id))
+                    break
+                except Exception:
+                    continue
 
 
 def get_user(telegram_id: int):
     with conn() as c:
         return c.execute("SELECT * FROM users WHERE telegram_id=?", (telegram_id,)).fetchone()
+
+
+def get_user_by_ref_code(ref_code: str):
+    code = (ref_code or "").strip()[:32]
+    if not code:
+        return None
+    with conn() as c:
+        return c.execute("SELECT * FROM users WHERE ref_code=?", (code,)).fetchone()
 
 
 def reserve_purchase(pid: str, telegram_id: int, stars: int, base_supply: int, users_per_unlock: int, drops_per_unlock: int, max_supply: int, kind="drop", ttl_minutes=20):
