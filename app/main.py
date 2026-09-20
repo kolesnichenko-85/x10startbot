@@ -11,7 +11,8 @@ from .catalog import CATALOG
 from .db import (
     init_db, upsert_user, get_user, reserve_purchase, cancel_purchase, get_purchase,
     purchase_reservation_valid, mark_paid_and_mint, mark_test_and_mint, collection,
-    leaderboard, daily_pool_status, track_event
+    leaderboard, daily_pool_status, track_event, retention_state,
+    claim_daily_reward, claim_daily_mission, claim_collection_milestone
 )
 from .telegram import create_drop_invoice, answer_precheckout, send_message, setup_bot
 from .market_api import router as market_router, init_market
@@ -29,7 +30,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.9.1-ios-canvas-22"
+APP_VERSION = "0.10.0-expeditions"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -146,7 +147,8 @@ async def product_event(request: Request, x_telegram_init_data: str | None = Hea
     event_name = str(body.get("event") or "").strip().lower()
     allowed = {
         "app_open","hatch_click","hatch_complete","specimen_open","market_open",
-        "listing_create","offer_create","share_click","physical_interest"
+        "listing_create","offer_create","share_click","physical_interest",
+        "daily_claim","mission_claim","milestone_claim"
     }
     if event_name not in allowed:
         raise HTTPException(status_code=400, detail="Unknown event")
@@ -198,7 +200,54 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         "trade_market_enabled": True,
         "paid_resale_enabled": False,
         "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else "",
+        "retention": retention_state(tid),
     }
+
+@app.post("/api/rewards/daily")
+async def daily_reward_claim(x_telegram_init_data: str | None = Header(default=None)):
+    tid, _ = auth_user(x_telegram_init_data)
+    try:
+        reward = claim_daily_reward(tid)
+    except ValueError as e:
+        code = str(e)
+        if code == "daily_already_claimed":
+            raise HTTPException(status_code=409, detail="Daily expedition reward already claimed")
+        raise HTTPException(status_code=400, detail=code)
+    track_event(tid, "daily_claim", source="expedition")
+    return {"ok": True, "reward": reward, "retention": retention_state(tid)}
+
+
+@app.post("/api/missions/{mission_key}/claim")
+async def mission_claim(mission_key: str, x_telegram_init_data: str | None = Header(default=None)):
+    tid, _ = auth_user(x_telegram_init_data)
+    try:
+        reward = claim_daily_mission(tid, mission_key)
+    except ValueError as e:
+        code = str(e)
+        if code == "mission_incomplete":
+            raise HTTPException(status_code=409, detail="Mission is not complete yet")
+        if code == "mission_already_claimed":
+            raise HTTPException(status_code=409, detail="Mission reward already claimed")
+        raise HTTPException(status_code=400, detail=code)
+    track_event(tid, "mission_claim", source=mission_key)
+    return {"ok": True, "reward": reward, "retention": retention_state(tid)}
+
+
+@app.post("/api/milestones/{threshold}/claim")
+async def milestone_claim(threshold: int, x_telegram_init_data: str | None = Header(default=None)):
+    tid, _ = auth_user(x_telegram_init_data)
+    try:
+        reward = claim_collection_milestone(tid, threshold)
+    except ValueError as e:
+        code = str(e)
+        if code == "milestone_incomplete":
+            raise HTTPException(status_code=409, detail="Collection milestone is not complete yet")
+        if code == "milestone_already_claimed":
+            raise HTTPException(status_code=409, detail="Milestone reward already claimed")
+        raise HTTPException(status_code=400, detail=code)
+    track_event(tid, "milestone_claim", source=f"species_{threshold}")
+    return {"ok": True, "reward": reward, "retention": retention_state(tid)}
+
 
 @app.get("/api/catalog")
 async def catalog_api():
