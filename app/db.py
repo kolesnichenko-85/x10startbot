@@ -106,9 +106,6 @@ CREATE TABLE IF NOT EXISTS daily_scout_targets (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
 ON users(ref_code) WHERE ref_code IS NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
-ON users(ref_code) WHERE ref_code IS NOT NULL;
-
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
 
@@ -129,6 +126,9 @@ CREATE TABLE IF NOT EXISTS users (
     dust INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     first_paid_at TEXT,
+    ref_code TEXT,
+    daily_streak INTEGER NOT NULL DEFAULT 0,
+    last_daily_claim TEXT,
     FOREIGN KEY(referrer_id) REFERENCES users(telegram_id)
 );
 
@@ -213,6 +213,9 @@ CREATE TABLE IF NOT EXISTS daily_scout_targets (
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
+ON users(ref_code) WHERE ref_code IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
 
@@ -222,7 +225,6 @@ ON product_events(event_name, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ownership_item
 ON ownership_events(item_id, id ASC);
 """
-
 
 def init_db():
     with conn() as c:
