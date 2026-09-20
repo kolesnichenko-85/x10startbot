@@ -52,6 +52,8 @@ checks={
     "daily_expedition":"Daily Expedition" in index and "missionList" in index and "dailyClaim" in index,
     "research_scout":"Research Scout" in index and "/api/research/scout" in index,
     "collection_milestones":"COLLECTION MILESTONES" in index and "milestoneGrid" in index,
+    "collection_book":"Collection Book" in index and "bookGrid" in index and "renderBook" in index,
+    "collector_rank":"rankLine" in index and "renderRank" in index,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
