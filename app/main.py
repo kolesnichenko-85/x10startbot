@@ -31,7 +31,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.10.0-expeditions"
+APP_VERSION = "0.11.0-season1-complete"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -214,6 +214,7 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         "price_stars": DROP_PRICE_STARS,
         "test_mode": FREE_TEST_MODE,
         "catalog_total": len(CATALOG),
+        "catalog": [public_character(c) for c in CATALOG],
         "collection": items,
         "unique_count": unique,
         "season_sets": season_sets,
@@ -312,7 +313,7 @@ async def test_drop(x_telegram_init_data: str | None = Header(default=None)):
     pid = "test_" + uuid.uuid4().hex
     # Free QA rotates only through release-quality beta specimens. Paid drops
     # continue to use the full rarity-weighted catalog and published odds.
-    preview_ids = ("c002","c003","c004","c005","c006","r003","r004","e001","e002","l001","c001","r001","r002")
+    preview_ids = ("c001","c002","c003","c004","c005","c006","c007","c008","c009","c010","r001","r002","r003","r004","r005","r006","r007","r008","e001","e002","e003","e004","e005","e006","l001","l002","l003","l004","m001","m002")
     owned_count = len(collection(tid))
     preview_id = preview_ids[owned_count % len(preview_ids)]
     character = next((c for c in CATALOG if c["id"] == preview_id), choose_character())
