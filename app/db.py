@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
     dust INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     first_paid_at TEXT,
+    daily_streak INTEGER NOT NULL DEFAULT 0,
+    last_daily_claim TEXT,
     FOREIGN KEY(referrer_id) REFERENCES users(telegram_id)
 );
 
@@ -79,6 +81,15 @@ CREATE TABLE IF NOT EXISTS ownership_events (
     event_key TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL,
     FOREIGN KEY(item_id) REFERENCES owned_items(id)
+);
+
+CREATE TABLE IF NOT EXISTS daily_mission_claims (
+    telegram_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    mission_key TEXT NOT NULL,
+    claimed_at TEXT NOT NULL,
+    PRIMARY KEY(telegram_id, day, mission_key),
+    FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
@@ -167,6 +178,15 @@ CREATE TABLE IF NOT EXISTS ownership_events (
     FOREIGN KEY(item_id) REFERENCES owned_items(id)
 );
 
+CREATE TABLE IF NOT EXISTS daily_mission_claims (
+    telegram_id BIGINT NOT NULL,
+    day TEXT NOT NULL,
+    mission_key TEXT NOT NULL,
+    claimed_at TEXT NOT NULL,
+    PRIMARY KEY(telegram_id, day, mission_key),
+    FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
 
@@ -184,12 +204,19 @@ def init_db():
         if is_postgres():
             c.execute("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS pool_day TEXT")
             c.execute("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS reservation_expires_at TEXT")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_streak INTEGER NOT NULL DEFAULT 0")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_daily_claim TEXT")
         else:
             cols = {r["name"] for r in c.execute("PRAGMA table_info(purchases)").fetchall()}
             if "pool_day" not in cols:
                 c.execute("ALTER TABLE purchases ADD COLUMN pool_day TEXT")
             if "reservation_expires_at" not in cols:
                 c.execute("ALTER TABLE purchases ADD COLUMN reservation_expires_at TEXT")
+            user_cols = {r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()}
+            if "daily_streak" not in user_cols:
+                c.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER NOT NULL DEFAULT 0")
+            if "last_daily_claim" not in user_cols:
+                c.execute("ALTER TABLE users ADD COLUMN last_daily_claim TEXT")
 
 
 def utcnow_dt():
@@ -379,14 +406,24 @@ def mark_paid_and_mint(pid: str, charge_id: str, character_id: str):
             "UPDATE purchases SET status='paid', telegram_charge_id=?, paid_at=? WHERE id=?",
             (charge_id, now, pid)
         )
+        duplicate = bool(c.execute(
+            "SELECT 1 FROM owned_items WHERE telegram_id=? AND character_id=? LIMIT 1",
+            (p["telegram_id"], character_id)
+        ).fetchone())
         c.execute(
             "INSERT INTO owned_items (telegram_id, character_id, serial_no, purchase_id, acquired_at) VALUES (?,?,?,?,?)",
             (p["telegram_id"], character_id, next_serial, pid, now)
         )
         c.execute(
-            "UPDATE users SET xp=xp+10, first_paid_at=COALESCE(first_paid_at, ?) WHERE telegram_id=?",
-            (now, p["telegram_id"])
+            "UPDATE users SET xp=xp+10, first_paid_at=COALESCE(first_paid_at, ?), dust=dust+? WHERE telegram_id=?",
+            (now, 1 if duplicate else 0, p["telegram_id"])
         )
+        if duplicate:
+            c.execute(
+                """INSERT INTO rewards(telegram_id,reward_key,amount,created_at)
+                   VALUES (?,?,?,?) ON CONFLICT(telegram_id,reward_key) DO NOTHING""",
+                (p["telegram_id"], f"duplicate:{pid}", 1, now)
+            )
 
         u = c.execute("SELECT referrer_id FROM users WHERE telegram_id=?", (p["telegram_id"],)).fetchone()
         if u and u["referrer_id"]:
@@ -421,11 +458,21 @@ def mark_test_and_mint(pid: str, telegram_id: int, character_id: str, base_suppl
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (pid, telegram_id, "test", 0, "paid", f"test:{pid}", now, now, pool["day"])
         )
+        duplicate = bool(c.execute(
+            "SELECT 1 FROM owned_items WHERE telegram_id=? AND character_id=? LIMIT 1",
+            (telegram_id, character_id)
+        ).fetchone())
         c.execute(
             "INSERT INTO owned_items (telegram_id, character_id, serial_no, purchase_id, acquired_at) VALUES (?,?,?,?,?)",
             (telegram_id, character_id, next_serial, pid, now)
         )
-        c.execute("UPDATE users SET xp=xp+10 WHERE telegram_id=?", (telegram_id,))
+        c.execute("UPDATE users SET xp=xp+10, dust=dust+? WHERE telegram_id=?", (1 if duplicate else 0, telegram_id))
+        if duplicate:
+            c.execute(
+                """INSERT INTO rewards(telegram_id,reward_key,amount,created_at)
+                   VALUES (?,?,?,?) ON CONFLICT(telegram_id,reward_key) DO NOTHING""",
+                (telegram_id, f"duplicate:{pid}", 1, now)
+            )
         item = c.execute("SELECT * FROM owned_items WHERE purchase_id=?", (pid,)).fetchone()
         _record_mint(c, item, now)
         return item
@@ -471,3 +518,198 @@ def product_event_counts(hours: int = 24):
                GROUP BY event_name ORDER BY n DESC, event_name ASC""",
             (since,)
         ).fetchall()
+
+
+MISSION_DEFS = {
+    "hatch_one": {"title": "Hatch one creature", "goal": 1, "xp": 20, "dust": 1},
+    "inspect_one": {"title": "Inspect a specimen", "goal": 1, "xp": 10, "dust": 0},
+    "visit_market": {"title": "Visit the creature exchange", "goal": 1, "xp": 10, "dust": 1},
+}
+
+MILESTONE_REWARDS = {
+    5: {"xp": 50, "dust": 1},
+    10: {"xp": 100, "dust": 2},
+    20: {"xp": 250, "dust": 5},
+    30: {"xp": 500, "dust": 10},
+}
+
+
+def _today():
+    return utcnow_dt().date()
+
+
+def _mission_progress(c, telegram_id: int, key: str, start_iso: str, end_iso: str) -> int:
+    if key == "hatch_one":
+        return int(c.execute(
+            "SELECT COUNT(*) AS n FROM owned_items WHERE telegram_id=? AND acquired_at>=? AND acquired_at<?",
+            (telegram_id, start_iso, end_iso)
+        ).fetchone()["n"])
+    event_name = "specimen_open" if key == "inspect_one" else "market_open"
+    return int(c.execute(
+        """SELECT COUNT(*) AS n FROM product_events
+           WHERE telegram_id=? AND event_name=? AND created_at>=? AND created_at<?""",
+        (telegram_id, event_name, start_iso, end_iso)
+    ).fetchone()["n"])
+
+
+def retention_state(telegram_id: int):
+    now = utcnow_dt()
+    start, end = _day_bounds(now)
+    start_iso, end_iso = start.isoformat(), end.isoformat()
+    day = start.date().isoformat()
+    yesterday = (start.date() - timedelta(days=1)).isoformat()
+
+    with conn() as c:
+        u = c.execute(
+            "SELECT daily_streak,last_daily_claim,xp,dust FROM users WHERE telegram_id=?",
+            (telegram_id,)
+        ).fetchone()
+        last = (u["last_daily_claim"] if u else None) or None
+        current_streak = int((u["daily_streak"] if u else 0) or 0)
+        next_streak = current_streak + 1 if last == yesterday else (current_streak if last == day else 1)
+        daily_claimed = last == day
+        daily_reward = {
+            "xp": 15 + (50 if next_streak % 7 == 0 else 0),
+            "dust": 1 + (2 if next_streak % 7 == 0 else 0),
+        }
+
+        claimed_rows = c.execute(
+            "SELECT mission_key FROM daily_mission_claims WHERE telegram_id=? AND day=?",
+            (telegram_id, day)
+        ).fetchall()
+        claimed = {r["mission_key"] for r in claimed_rows}
+        missions = []
+        for key, spec in MISSION_DEFS.items():
+            progress = min(spec["goal"], _mission_progress(c, telegram_id, key, start_iso, end_iso))
+            missions.append({
+                "key": key,
+                "title": spec["title"],
+                "progress": progress,
+                "goal": spec["goal"],
+                "complete": progress >= spec["goal"],
+                "claimed": key in claimed,
+                "reward_xp": spec["xp"],
+                "reward_dust": spec["dust"],
+            })
+
+        unique = int(c.execute(
+            "SELECT COUNT(DISTINCT character_id) AS n FROM owned_items WHERE telegram_id=?",
+            (telegram_id,)
+        ).fetchone()["n"])
+        reward_rows = c.execute(
+            "SELECT reward_key FROM rewards WHERE telegram_id=? AND reward_key LIKE 'collection:%'",
+            (telegram_id,)
+        ).fetchall()
+        reward_keys = {r["reward_key"] for r in reward_rows}
+        milestones = []
+        for threshold, reward in MILESTONE_REWARDS.items():
+            milestones.append({
+                "threshold": threshold,
+                "reached": unique >= threshold,
+                "claimed": f"collection:{threshold}" in reward_keys,
+                "reward_xp": reward["xp"],
+                "reward_dust": reward["dust"],
+            })
+
+        return {
+            "day": day,
+            "daily": {
+                "streak": current_streak,
+                "can_claim": not daily_claimed,
+                "claimed": daily_claimed,
+                "next_streak": next_streak,
+                "reward_xp": daily_reward["xp"],
+                "reward_dust": daily_reward["dust"],
+            },
+            "missions": missions,
+            "milestones": milestones,
+            "unique_species": unique,
+        }
+
+
+def claim_daily_reward(telegram_id: int):
+    now = utcnow_dt()
+    day = now.date().isoformat()
+    yesterday = (now.date() - timedelta(days=1)).isoformat()
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        row_sql = "SELECT daily_streak,last_daily_claim FROM users WHERE telegram_id=?" + (" FOR UPDATE" if is_postgres() else "")
+        u = c.execute(row_sql, (telegram_id,)).fetchone()
+        if not u:
+            raise ValueError("user_not_found")
+        if u["last_daily_claim"] == day:
+            raise ValueError("daily_already_claimed")
+        streak = int(u["daily_streak"] or 0) + 1 if u["last_daily_claim"] == yesterday else 1
+        xp = 15 + (50 if streak % 7 == 0 else 0)
+        dust = 1 + (2 if streak % 7 == 0 else 0)
+        now_iso = now.isoformat()
+        c.execute(
+            "UPDATE users SET daily_streak=?,last_daily_claim=?,xp=xp+?,dust=dust+? WHERE telegram_id=?",
+            (streak, day, xp, dust, telegram_id)
+        )
+        c.execute(
+            """INSERT INTO rewards(telegram_id,reward_key,amount,created_at)
+               VALUES (?,?,?,?) ON CONFLICT(telegram_id,reward_key) DO NOTHING""",
+            (telegram_id, f"daily:{day}", dust, now_iso)
+        )
+        return {"streak": streak, "xp": xp, "dust": dust}
+
+
+def claim_daily_mission(telegram_id: int, mission_key: str):
+    spec = MISSION_DEFS.get(mission_key)
+    if not spec:
+        raise ValueError("unknown_mission")
+    now = utcnow_dt()
+    start, end = _day_bounds(now)
+    day = start.date().isoformat()
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        progress = _mission_progress(c, telegram_id, mission_key, start.isoformat(), end.isoformat())
+        if progress < spec["goal"]:
+            raise ValueError("mission_incomplete")
+        exists = c.execute(
+            "SELECT 1 FROM daily_mission_claims WHERE telegram_id=? AND day=? AND mission_key=?",
+            (telegram_id, day, mission_key)
+        ).fetchone()
+        if exists:
+            raise ValueError("mission_already_claimed")
+        c.execute(
+            "INSERT INTO daily_mission_claims(telegram_id,day,mission_key,claimed_at) VALUES (?,?,?,?)",
+            (telegram_id, day, mission_key, now.isoformat())
+        )
+        c.execute(
+            "UPDATE users SET xp=xp+?,dust=dust+? WHERE telegram_id=?",
+            (spec["xp"], spec["dust"], telegram_id)
+        )
+        return {"mission_key": mission_key, "xp": spec["xp"], "dust": spec["dust"]}
+
+
+def claim_collection_milestone(telegram_id: int, threshold: int):
+    reward = MILESTONE_REWARDS.get(int(threshold))
+    if not reward:
+        raise ValueError("unknown_milestone")
+    with conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        unique = int(c.execute(
+            "SELECT COUNT(DISTINCT character_id) AS n FROM owned_items WHERE telegram_id=?",
+            (telegram_id,)
+        ).fetchone()["n"])
+        if unique < threshold:
+            raise ValueError("milestone_incomplete")
+        key = f"collection:{threshold}"
+        exists = c.execute(
+            "SELECT 1 FROM rewards WHERE telegram_id=? AND reward_key=?",
+            (telegram_id, key)
+        ).fetchone()
+        if exists:
+            raise ValueError("milestone_already_claimed")
+        now = utcnow()
+        c.execute(
+            "INSERT INTO rewards(telegram_id,reward_key,amount,created_at) VALUES (?,?,?,?)",
+            (telegram_id, key, reward["dust"], now)
+        )
+        c.execute(
+            "UPDATE users SET xp=xp+?,dust=dust+? WHERE telegram_id=?",
+            (reward["xp"], reward["dust"], telegram_id)
+        )
+        return {"threshold": threshold, "xp": reward["xp"], "dust": reward["dust"]}
