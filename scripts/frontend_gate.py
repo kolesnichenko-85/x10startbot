@@ -61,6 +61,7 @@ checks={
     "local_model_viewer":"/static/vendor/model-viewer.min.js" in index and "ajax.googleapis.com/ajax/libs/model-viewer" not in index,
     "performance":"loading=\"lazy\"" in index and 'rel="preload" href="/static/assets/primal-egg.png"' in index,
     "rankings":"Collector Rankings" in index and "/api/leaderboard" in index,
+    "matching_trade_ui":"matchesListing" in market and "SELECT MATCHING CREATURE" in market and "syncWantedControls" in market,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
