@@ -108,3 +108,12 @@ def check_full_catalog_art():
     assert len([cid for cid in ALL_ART_IDS if cid in pairs]) == 30
 
 check_full_catalog_art()
+
+
+def check_paid_launch_guard():
+    main_py = (ROOT / "app/main.py").read_text()
+    assert "persistent_storage_ready()" in main_py
+    assert "paid_launch_ready" in main_py
+    assert "Paid DROP is locked until persistent storage is connected" in main_py
+
+check_paid_launch_guard()
