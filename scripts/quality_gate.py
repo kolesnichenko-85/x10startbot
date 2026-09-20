@@ -144,6 +144,7 @@ def check_market_locking_and_targets():
     assert 'FOR UPDATE' in market
     assert 'This listing only accepts' in market
     assert 'Offered creature no longer matches this listing' in market
+    assert 'listing -> offer -> specimens' in market
 
 def check_auth_timestamp_guard():
     auth = (ROOT / "app/auth.py").read_text()
@@ -154,3 +155,10 @@ def check_auth_timestamp_guard():
 check_migration_ordering()
 check_market_locking_and_targets()
 check_auth_timestamp_guard()
+
+
+def check_no_obsolete_hatch_runtime():
+    assert not (ROOT / "app/static/hatch_v2.js").exists()
+    assert not (ROOT / "app/static/hatch_engine_v21.js").exists()
+
+check_no_obsolete_hatch_runtime()
