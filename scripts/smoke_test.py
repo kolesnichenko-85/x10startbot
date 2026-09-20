@@ -54,6 +54,13 @@ with TestClient(app) as client:
     assert all(m["claimed"] for m in after_rewards["retention"]["missions"])
     assert next(x for x in after_rewards["retention"]["milestones"] if x["threshold"]==5)["claimed"] is True
     assert after_rewards["user"]["dust"]>=5
+    before_scout_dust=after_rewards["user"]["dust"]
+    scout=client.post("/api/research/scout",headers=H3,json={})
+    assert scout.status_code==200, scout.text
+    assert scout.json()["target"] is not None
+    after_scout=client.get("/api/bootstrap",headers=H3).json()
+    assert after_scout["retention"]["scout_target"] is not None
+    assert after_scout["user"]["dust"]==before_scout_dust-2
 
     # Collector 1 hatches and lists a specimen.
     before=client.get("/api/bootstrap",headers=H1)
@@ -129,4 +136,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: retention rewards, missions, milestones, two-user market trade and provenance.")
+print("DROP1 API smoke test passed: expedition rewards, Research Scout, milestones, two-user market trade and provenance.")
