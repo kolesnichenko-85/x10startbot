@@ -33,8 +33,16 @@ def validate_init_data(init_data: str, max_age_seconds: int = 3600):
     if not hmac.compare_digest(calculated_hash, received_hash):
         raise ValueError("bad hash")
 
-    auth_date = int(pairs.get("auth_date", "0"))
-    if auth_date and time.time() - auth_date > max_age_seconds:
+    try:
+        auth_date = int(pairs.get("auth_date", "0"))
+    except Exception:
+        raise ValueError("bad auth_date")
+    now = int(time.time())
+    if auth_date <= 0:
+        raise ValueError("missing auth_date")
+    if auth_date > now + 60:
+        raise ValueError("auth_date is in the future")
+    if now - auth_date > max_age_seconds:
         raise ValueError("stale auth")
 
     user = json.loads(pairs["user"]) if pairs.get("user") else None
