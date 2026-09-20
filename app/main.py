@@ -122,6 +122,8 @@ async def health():
         "storage": database_backend(),
         "persistent_storage": database_backend() == "postgres" or not os.getenv("DATABASE_PATH", "/tmp/drop1.db").startswith("/tmp/"),
         "flagship_3d": True,
+        "daily_expedition": True,
+        "research_scout": True,
     }
 
 @app.get("/odds", response_class=HTMLResponse)
