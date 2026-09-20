@@ -99,6 +99,10 @@ with TestClient(app) as client:
     # Collector 1 hatches and lists a specimen.
     before=client.get("/api/bootstrap",headers=H1)
     assert before.status_code==200 and before.json()["test_mode"] is True
+    share_url=before.json()["share_url"]
+    assert "ref_" in share_url and "777000001" not in share_url
+    leaders=client.get("/api/leaderboard").json()["leaders"]
+    assert leaders and "telegram_id" not in leaders[0] and "username" not in leaders[0] and "first_name" not in leaders[0]
     hatch1=client.post("/api/test/drop",headers=H1,json={})
     assert hatch1.status_code==200, hatch1.text
     item1=hatch1.json()["item_id"]
@@ -172,4 +176,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: 30-species season, rewards, reservation anti-abuse, exact market trade and provenance.")
+print("DROP1 API smoke test passed: privacy-safe referrals/leaderboard, 30 species, rewards, reservation anti-abuse, exact trade and provenance.")
