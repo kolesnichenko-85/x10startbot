@@ -85,3 +85,25 @@ def check_retention_runtime():
     assert "Research Dust" in index
 
 check_retention_runtime()
+
+
+ALL_ART_IDS = (
+    "c001","c002","c003","c004","c005","c006","c007","c008","c009","c010",
+    "r001","r002","r003","r004","r005","r006","r007","r008",
+    "e001","e002","e003","e004","e005","e006",
+    "l001","l002","l003","l004","m001","m002"
+)
+
+def check_full_catalog_art():
+    art = (ROOT / "app/static/art.js").read_text()
+    import re
+    pairs = dict(re.findall(r"'([cerml]\d{3})':'([^']+)'", art))
+    for cid in ALL_ART_IDS:
+        assert cid in pairs, f"Missing art mapping for {cid}"
+        path = pairs[cid]
+        if path.startswith("/static/"):
+            p = ROOT / "app" / path.lstrip("/")
+            assert p.exists() and p.stat().st_size > 0, f"Missing local art asset for {cid}: {p}"
+    assert len([cid for cid in ALL_ART_IDS if cid in pairs]) == 30
+
+check_full_catalog_art()
