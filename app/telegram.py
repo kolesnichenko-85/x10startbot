@@ -65,6 +65,8 @@ async def setup_bot(base_url: str, webhook_secret: str):
             {"command":"collection","description":"My collection"},
             {"command":"odds","description":"Drop rarity odds"},
             {"command":"leaderboard","description":"Leaderboard"},
+            {"command":"terms","description":"Terms"},
+            {"command":"privacy","description":"Privacy"},
             {"command":"support","description":"Support"}
         ]
     })
