@@ -31,7 +31,7 @@ DAILY_POOL_DROPS_PER_UNLOCK = int(os.getenv("DAILY_POOL_DROPS_PER_UNLOCK", "3"))
 DAILY_POOL_MAX = int(os.getenv("DAILY_POOL_MAX", "300"))
 GENESIS_SUPPLY = int(os.getenv("GENESIS_SUPPLY", "100000"))
 
-APP_VERSION = "0.13.0-release-candidate"
+APP_VERSION = "0.13.1-audited-rc"
 
 app = FastAPI(title="DROP1")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -239,9 +239,6 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         retention["scout_target"] = None
     return {
         "user": {
-            "id": tid,
-            "username": u["username"],
-            "first_name": u["first_name"],
             "xp": u["xp"],
             "dust": u["dust"],
         },
