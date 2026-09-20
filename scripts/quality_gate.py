@@ -128,3 +128,29 @@ def check_release_performance():
     assert 'primal-egg.png" as="image"' in index
 
 check_release_performance()
+
+
+def check_migration_ordering():
+    db = (ROOT / "app/db.py").read_text()
+    schema_part = db.split("def init_db():", 1)[0]
+    assert "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code" not in schema_part, "ref_code index must be created after column migrations"
+    assert 'ALTER TABLE users ADD COLUMN IF NOT EXISTS ref_code TEXT' in db
+    assert 'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code ON users(ref_code)' in db
+
+def check_market_locking_and_targets():
+    market = (ROOT / "app/market_api.py").read_text()
+    for token in ("_owned_for_update", "_listing_for_update", "_offer_for_update", "_matches_listing"):
+        assert token in market, token
+    assert 'FOR UPDATE' in market
+    assert 'This listing only accepts' in market
+    assert 'Offered creature no longer matches this listing' in market
+
+def check_auth_timestamp_guard():
+    auth = (ROOT / "app/auth.py").read_text()
+    assert "missing auth_date" in auth
+    assert "auth_date is in the future" in auth
+    assert "stale auth" in auth
+
+check_migration_ordering()
+check_market_locking_and_targets()
+check_auth_timestamp_guard()
