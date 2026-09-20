@@ -142,6 +142,7 @@ async def health():
         "trade_market": True,
         "paid_resale": False,
         "version": APP_VERSION,
+        "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
         "stage": "closed_beta",
         "storage": database_backend(),
         "persistent_storage": persistent_storage_ready(),
