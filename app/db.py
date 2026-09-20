@@ -103,9 +103,6 @@ CREATE TABLE IF NOT EXISTS daily_scout_targets (
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
-ON users(ref_code) WHERE ref_code IS NOT NULL;
-
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
 
@@ -213,9 +210,6 @@ CREATE TABLE IF NOT EXISTS daily_scout_targets (
     FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code
-ON users(ref_code) WHERE ref_code IS NOT NULL;
-
 CREATE INDEX IF NOT EXISTS idx_product_events_user_time
 ON product_events(telegram_id, created_at DESC);
 
@@ -248,7 +242,7 @@ def init_db():
                 c.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER NOT NULL DEFAULT 0")
             if "last_daily_claim" not in user_cols:
                 c.execute("ALTER TABLE users ADD COLUMN last_daily_claim TEXT")
-        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code_runtime ON users(ref_code) WHERE ref_code IS NOT NULL")
+        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_ref_code ON users(ref_code) WHERE ref_code IS NOT NULL")
 
 
 def utcnow_dt():
