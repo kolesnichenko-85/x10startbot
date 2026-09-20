@@ -98,7 +98,9 @@ def public_character(c):
     return {k: v for k, v in c.items() if k != "weight"}
 
 
-def public_collector_label(telegram_id: int) -> str:
+def public_collector_label(telegram_id: int, ref_code: str | None = None) -> str:
+    if ref_code:
+        return f"Collector {str(ref_code)[:6].upper()}"
     digest = hashlib.sha256(f"drop1:{telegram_id}".encode()).hexdigest()[:6].upper()
     return f"Collector {digest}"
 
@@ -338,7 +340,7 @@ async def leaderboard_api():
         "leaders": [
             {
                 "rank": idx,
-                "label": public_collector_label(int(row["telegram_id"])),
+                "label": public_collector_label(int(row["telegram_id"]), row["ref_code"]),
                 "xp": int(row["xp"]),
                 "drops": int(row["drops"]),
             }
@@ -467,7 +469,7 @@ async def telegram_webhook(secret: str, request: Request):
         if rows:
             lines = ["🏆 DROP1 Leaderboard"]
             for idx, row in enumerate(rows, start=1):
-                name = public_collector_label(int(row["telegram_id"]))
+                name = public_collector_label(int(row["telegram_id"]), row["ref_code"])
                 lines.append(f"{idx}. {name} — {row['xp']} XP · {row['drops']} hatches")
             await send_message(chat_id, "\n".join(lines))
         else:
