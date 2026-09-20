@@ -19,6 +19,7 @@ from app.main import app
 H1={"X-Telegram-Init-Data":"dev:777000001"}
 H2={"X-Telegram-Init-Data":"dev:777000002"}
 H3={"X-Telegram-Init-Data":"dev:777000003"}
+H4={"X-Telegram-Init-Data":"dev:777000004"}
 
 with TestClient(app) as client:
     health=client.get("/health")
@@ -61,6 +62,25 @@ with TestClient(app) as client:
     after_scout=client.get("/api/bootstrap",headers=H3).json()
     assert after_scout["retention"]["scout_target"] is not None
     assert after_scout["user"]["dust"]==before_scout_dust-2
+
+    # Finished Season 1: the free QA rotation must expose every catalog species once.
+    ids=[]
+    for _ in range(30):
+        h=client.post("/api/test/drop",headers=H4,json={})
+        assert h.status_code==200, h.text
+        ids.append(h.json()["character"]["id"])
+    assert len(ids)==30 and len(set(ids))==30, ids
+    season=client.get("/api/bootstrap",headers=H4).json()
+    assert season["unique_count"]==30
+    assert len(season["catalog"])==30
+    assert sum(x["owned"] for x in season["season_sets"])==30
+    # 31st hatch repeats the first species and therefore creates useful duplicate Dust.
+    before_dust=season["user"]["dust"]
+    repeat=client.post("/api/test/drop",headers=H4,json={})
+    assert repeat.status_code==200
+    final_season=client.get("/api/bootstrap",headers=H4).json()
+    assert final_season["unique_count"]==30
+    assert final_season["user"]["dust"]==before_dust+1
 
     # Collector 1 hatches and lists a specimen.
     before=client.get("/api/bootstrap",headers=H1)
@@ -136,4 +156,4 @@ with TestClient(app) as client:
         assert payload["trade_count"]==1
         assert payload["history"][-1]["event_type"]=="trade"
 
-print("DROP1 API smoke test passed: expedition rewards, Research Scout, milestones, two-user market trade and provenance.")
+print("DROP1 API smoke test passed: full 30-species season, duplicate Dust, expedition, Scout, milestones, market and provenance.")
