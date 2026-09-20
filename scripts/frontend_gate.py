@@ -59,6 +59,8 @@ checks={
     "visible_odds":"PRIMAL HATCH ODDS" in index and "Common 65%" in index and "No cash-out" in index,
     "legal_links":'href="/terms"' in index and 'href="/privacy"' in index,
     "local_model_viewer":"/static/vendor/model-viewer.min.js" in index and "ajax.googleapis.com/ajax/libs/model-viewer" not in index,
+    "performance":"loading=\"lazy\"" in index and 'rel="preload" href="/static/assets/primal-egg.png"' in index,
+    "rankings":"Collector Rankings" in index and "/api/leaderboard" in index,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
