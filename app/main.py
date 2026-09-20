@@ -41,10 +41,15 @@ app.include_router(market_router)
 async def beta_no_cache(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
-    if path == "/" or path.endswith(".html") or path.endswith(".js"):
+    volatile_js = path.endswith("/art.js") or path.endswith("/hatch_canvas_v22.js")
+    if path == "/" or path.endswith(".html") or volatile_js:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+    elif path.startswith("/static/vendor/") or path.startswith("/static/models/"):
+        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+    elif path.startswith("/static/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=86400"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
@@ -106,6 +111,11 @@ def choose_character():
         if n < cursor:
             return c
     return CATALOG[-1]
+
+@app.head("/")
+async def home_head():
+    return HTMLResponse("", status_code=200)
+
 
 @app.get("/")
 async def home():
