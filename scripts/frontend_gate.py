@@ -49,6 +49,9 @@ checks={
     "real_3d":"neon-raptor.glb" in art and "model-viewer" in art,
     "egg_fallback":"drawEggFallback" in hatch and "primal-egg.png" in hatch,
     "ios_hatch_renderer":"hatchCanvas22" in hatch and "setTimeout(frame,33)" in hatch and "getContext(\"2d\"" in hatch,
+    "daily_expedition":"Daily Expedition" in index and "missionList" in index and "dailyClaim" in index,
+    "research_scout":"Research Scout" in index and "/api/research/scout" in index,
+    "collection_milestones":"COLLECTION MILESTONES" in index and "milestoneGrid" in index,
 }
 bad=[k for k,v in checks.items() if not v]
 if bad:
