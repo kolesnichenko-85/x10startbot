@@ -1,4 +1,4 @@
-import os, uuid, secrets
+import os, uuid, secrets, hashlib
 from fastapi import FastAPI, Request, HTTPException, Header
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,7 +9,7 @@ load_dotenv()
 from .auth import validate_init_data
 from .catalog import CATALOG
 from .db import (
-    init_db, upsert_user, get_user, reserve_purchase, cancel_purchase, get_purchase,
+    init_db, upsert_user, get_user, get_user_by_ref_code, reserve_purchase, cancel_purchase, get_purchase,
     purchase_reservation_valid, mark_paid_and_mint, mark_test_and_mint, collection,
     leaderboard, daily_pool_status, track_event, retention_state,
     claim_daily_reward, claim_daily_mission, claim_collection_milestone,
@@ -76,10 +76,9 @@ def auth_user(init_data: str | None):
         start = payload.get("start_param")
         referrer_id = None
         if start and start.startswith("ref_"):
-            try:
-                referrer_id = int(start.split("_", 1)[1])
-            except Exception:
-                referrer_id = None
+            code = start.split("_", 1)[1].strip()
+            ref = get_user_by_ref_code(code)
+            referrer_id = int(ref["telegram_id"]) if ref else None
         tid = int(u["id"])
         upsert_user(tid, u.get("username"), u.get("first_name"), referrer_id)
         return tid, payload
@@ -88,6 +87,11 @@ def auth_user(init_data: str | None):
 
 def public_character(c):
     return {k: v for k, v in c.items() if k != "weight"}
+
+
+def public_collector_label(telegram_id: int) -> str:
+    digest = hashlib.sha256(f"drop1:{telegram_id}".encode()).hexdigest()[:6].upper()
+    return f"Collector {digest}"
 
 def choose_character():
     total = sum(c["weight"] for c in CATALOG)
@@ -226,7 +230,7 @@ async def bootstrap(x_telegram_init_data: str | None = Header(default=None)):
         "genesis_supply": GENESIS_SUPPLY,
         "trade_market_enabled": True,
         "paid_resale_enabled": False,
-        "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{tid}" if BOT_USERNAME else "",
+        "share_url": f"https://t.me/{BOT_USERNAME}?startapp=ref_{u['ref_code']}" if BOT_USERNAME and u and u["ref_code"] else "",
         "retention": retention,
     }
 
@@ -307,7 +311,18 @@ async def catalog_api():
 
 @app.get("/api/leaderboard")
 async def leaderboard_api():
-    return {"leaders": [dict(r) for r in leaderboard()]}
+    rows = leaderboard()
+    return {
+        "leaders": [
+            {
+                "rank": idx,
+                "label": public_collector_label(int(row["telegram_id"])),
+                "xp": int(row["xp"]),
+                "drops": int(row["drops"]),
+            }
+            for idx, row in enumerate(rows, start=1)
+        ]
+    }
 
 @app.post("/api/test/drop")
 async def test_drop(x_telegram_init_data: str | None = Header(default=None)):
@@ -459,7 +474,8 @@ async def telegram_webhook(secret: str, request: Request):
                 item, minted = mark_paid_and_mint(pid, sp["telegram_payment_charge_id"], character["id"])
                 if minted:
                     rarity = character["rarity"].upper()
-                    share_url = f"https://t.me/{BOT_USERNAME}?startapp=ref_{p['telegram_id']}" if BOT_USERNAME else ""
+                    payer = get_user(int(p["telegram_id"]))
+                    share_url = f"https://t.me/{BOT_USERNAME}?startapp=ref_{payer['ref_code']}" if BOT_USERNAME and payer and payer["ref_code"] else ""
                     markup = {"inline_keyboard": [[{"text": "Open collection", "web_app": {"url": launch_url}}]]} if launch_url else None
                     await send_message(
                         p["telegram_id"],
