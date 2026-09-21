@@ -81,7 +81,8 @@ assert "no-store" in art_headers.get("cache-control","")
 
 # Every production creature art mapping must resolve from the live deployment,
 # not merely exist in source. This catches broken paths/case changes after deploy.
-art_pairs=dict(re.findall(r"'([crelm]\d{3})':'([^']+)'",art))
+art_block=art.split("window.DROP1_ART={",1)[1].split("};",1)[0]
+art_pairs=dict(re.findall(r"'([crelm]\d{3})':'([^']+)'",art_block))
 assert set(expected_ids).issubset(art_pairs),sorted(set(expected_ids)-set(art_pairs))
 for cid in expected_ids:
     path=art_pairs[cid]
